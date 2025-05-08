@@ -1,4 +1,6 @@
-from correctness import compute_score
+from correctness import CorrectnessService
+
+correctness_service = CorrectnessService()
 
 CORRECTNESS_WEIGHT = 0.25
 CLARITY_WEIGHT = 0.25
@@ -7,7 +9,7 @@ COHERENCE_WEIGHT = 0.3
 
 
 def get_correctness_score(text: str):
-    return compute_score(text)
+    return correctness_service.compute_score(text)
 
 
 def get_clarity_score(text: str):
@@ -38,8 +40,7 @@ def compute_global_score(
 
 
 if __name__ == "__main__":
-    text = """
-    This are not a text with many different typez of errors. 
+    text = """This are not a text with many different typez of errors. 
     First, there's a spelling error in 'typez'. 
     Second, there's a grammar error: 'Here is a lot of errors'. 
     Third, there's a capitaelizatioagagn error: 'i am a bot'. 
@@ -50,11 +51,3 @@ if __name__ == "__main__":
 
     score = get_correctness_score(text)
     print(score)
-    print(
-        compute_global_score(
-            score.score,
-            get_clarity_score(text),
-            get_vocabulary_score(text),
-            get_coherence_score(text),
-        )
-    )

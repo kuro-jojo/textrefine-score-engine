@@ -61,10 +61,10 @@ The module categorizes text issues into several main categories, each with a sev
 ## Usage
 
 ```python
-from correctness.scorer import compute_score
+from correctness.service import CorrectnessService
 
 # Example usage
-result = compute_score("Your text to analyze here")
+result = CorrectnessService().compute_score("Your text to analyze here")
 
 # Access results
 print(f"Score: {result.score}")
