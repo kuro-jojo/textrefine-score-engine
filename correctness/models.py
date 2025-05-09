@@ -39,7 +39,7 @@ class CorrectnessResult(BaseModel):
     def __str__(self) -> str:
         issues_str = "\n".join(
             [
-                f"\t- {issue.message} (Category: {issue.category.label}, Severity: {issue.category.severity}, Rule issue type: {issue.rule_issue_type})"
+                f"\t- {issue.message} (Category: {issue.category.label}, Severity: {issue.category.severity}, Rule issue type: {issue.rule_issue_type}, Location: {issue.start_offset}-{issue.end_offset}, Word: {issue.original_text[issue.start_offset:issue.end_offset]})"
                 for issue in self.issues
             ]
         )

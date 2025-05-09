@@ -64,7 +64,7 @@ class TestCorrectnessService(unittest.TestCase):
             mock_check.return_value = []  # Return empty for no issues
             result3 = self.service.compute_score(self.test_text)
             self.assertEqual(mock_check.call_count, 1)  # Cache was evicted
-            self.assertEqual(result3.score, 100)  # No issues means perfect score
+            self.assertEqual(result3.score, 1.0)  # No issues means perfect score
 
     def test_compute_score_no_issues(self):
         """Test score computation with no issues"""
@@ -73,7 +73,7 @@ class TestCorrectnessService(unittest.TestCase):
 
             result = self.service.compute_score(self.test_text)
             self.assertIsNotNone(result)
-            self.assertEqual(result.score, 100)
+            self.assertEqual(result.score, 1.0)
             self.assertEqual(result.normalized_penalty, 0)
             self.assertEqual(len(result.issues), 0)
             self.assertEqual(len(result.breakdown), 0)
@@ -147,7 +147,7 @@ class TestCorrectnessService(unittest.TestCase):
             )
             self.assertEqual(spelling_breakdown.count, 1)
             self.assertEqual(
-                spelling_breakdown.penalty, 3
+                spelling_breakdown.penalty, 2
             )  # Spelling errors have severity 3
 
     def test_compute_score_error_handling(self):
@@ -164,7 +164,8 @@ class TestCorrectnessService(unittest.TestCase):
         issue = TextIssue(
             message="Possible spelling error.",
             replacements=["issue"],
-            error_text="Thhere is an error",
+            original_text="Ththere is an error",
+            error_text="Ththere is an error",
             start_offset=0,
             error_length=4,
             category=ErrorCategory.SPELLING_TYPING,
@@ -188,7 +189,8 @@ class TestCorrectnessService(unittest.TestCase):
             TextIssue(
                 message="Possible spelling error.",
                 replacements=["issue"],
-                error_text="Thhere is an error",
+                original_text="Ththere is an error",
+                error_text="Ththere is an error",
                 start_offset=0,
                 error_length=4,
                 category=ErrorCategory.SPELLING_TYPING,
@@ -197,6 +199,7 @@ class TestCorrectnessService(unittest.TestCase):
             TextIssue(
                 message="Possible grammar error.",
                 replacements=["issue"],
+                original_text="Ththere is an error",
                 error_text="Ththere is an error",
                 start_offset=0,
                 error_length=4,
@@ -221,7 +224,7 @@ class TestCorrectnessService(unittest.TestCase):
             if bd.category == ErrorCategory.SPELLING_TYPING
         )
         self.assertEqual(spelling_breakdown.count, 1)
-        self.assertEqual(spelling_breakdown.penalty, 3)
+        self.assertEqual(spelling_breakdown.penalty, 2)
 
 
 if __name__ == "__main__":

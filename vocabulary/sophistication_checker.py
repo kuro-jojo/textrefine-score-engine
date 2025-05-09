@@ -15,13 +15,13 @@ from spacy.language import Language
 from spacy.tokens import Doc
 from wordfreq import zipf_frequency
 from vocabulary.models import SophisticationLevel, SophisticationResult
-
-COMMON_THRESHOLD = 5.0
-MID_THRESHOLD = 3.5
-
-RARE_WEIGHT = 3.0
-MID_WEIGHT = 1.5
-COMMON_WEIGHT = 1.0
+from vocabulary.constants import (
+    COMMON_WORDS_THRESHOLD,
+    MID_WORDS_THRESHOLD,
+    RARE_WORDS_WEIGHT,
+    MID_WORDS_WEIGHT,
+    COMMON_WORDS_WEIGHT,
+)
 
 
 class SophisticationChecker:
@@ -32,15 +32,13 @@ class SophisticationChecker:
     very common words and 1 is a text with only very rare words.
     """
 
-    def __init__(self, nlp: Language, exclude_stopwords: bool = True):
+    def __init__(self, nlp: Language):
         """
         Initializes the evaluator.
 
         :param nlp: The spaCy language model
-        :param exclude_stopwords: If True, exclude stopwords from the calculation
         """
         self.nlp = nlp
-        self.exclude_stopwords = exclude_stopwords
 
     def evaluate(self, text: str) -> SophisticationResult:
         """
@@ -53,26 +51,34 @@ class SophisticationChecker:
         doc: Doc = self.nlp(text)
 
         # Get total word count (including stopwords)
-        total_words = len([token for token in doc if not token.is_punct])
-
+        tokens = [
+            token.text.lower() for token in doc if token.is_alpha and not token.is_stop
+        ]
+        word_count = len(tokens)
+        if word_count == 0:
+            return SophisticationResult(
+                score=0,
+                common_count=0,
+                mid_count=0,
+                rare_count=0,
+                word_count=0,
+                level=SophisticationLevel.BASIC,
+            )
         sophistication_counts = {"common": 0, "mid": 0, "rare": 0}
 
         # Process meaningful words only
-        for token in doc:
-            if not (token.is_stop or token.is_punct or token.is_space):
-                zipf_value = zipf_frequency(
-                    token.text.lower(), minimum=0, lang=self.nlp.lang
-                )
-                if zipf_value >= COMMON_THRESHOLD:
-                    sophistication_counts["common"] += 1
-                elif MID_THRESHOLD <= zipf_value < COMMON_THRESHOLD:
-                    sophistication_counts["mid"] += 1
-                else:
-                    sophistication_counts["rare"] += 1
+        for token in tokens:
+            zipf_value = zipf_frequency(token, minimum=0, lang=self.nlp.lang)
+            if zipf_value >= COMMON_WORDS_THRESHOLD:
+                sophistication_counts["common"] += 1
+            elif MID_WORDS_THRESHOLD <= zipf_value < COMMON_WORDS_THRESHOLD:
+                sophistication_counts["mid"] += 1
+            else:
+                sophistication_counts["rare"] += 1
 
         # Calculate sophistication score with length adjustment
         sophistication_score, sophistication_level = self.compute_sophistication_score(
-            sophistication_counts, total_words
+            sophistication_counts, word_count
         )
 
         return SophisticationResult(
@@ -80,14 +86,14 @@ class SophisticationChecker:
             common_count=sophistication_counts["common"],
             mid_count=sophistication_counts["mid"],
             rare_count=sophistication_counts["rare"],
-            word_count=total_words,
+            word_count=word_count,
             level=sophistication_level,
         )
 
     def compute_sophistication_score(
         self,
         counts: dict,
-        total_words: int,
+        word_count: int,
         method: Literal["linear", "sigmoid"] = "linear",
     ) -> tuple[float, SophisticationLevel]:
         """
@@ -104,12 +110,12 @@ class SophisticationChecker:
 
         # Calculate weighted sum of sophistication levels
         weighted_score = (
-            counts["common"] * COMMON_WEIGHT
-            + counts["mid"] * MID_WEIGHT
-            + counts["rare"] * RARE_WEIGHT
-        ) / total_words
+            counts["common"] * COMMON_WORDS_WEIGHT
+            + counts["mid"] * MID_WORDS_WEIGHT
+            + counts["rare"] * RARE_WORDS_WEIGHT
+        ) / word_count
 
-        meaningful_ratio = (counts["rare"] + counts["mid"]) / total_words
+        meaningful_ratio = (counts["rare"] + counts["mid"]) / word_count
 
         normalized_score: float
 
@@ -164,6 +170,7 @@ class SophisticationChecker:
 
         adjusted_score = weighted_score * ratio_adjustment
 
+        # normalized_score = round(min(1.0, adjusted_score / MAX_SOPHISTICATION), 4) # cap based on expected range
         normalized_score = round(min(1.0, adjusted_score), 4)
 
         return normalized_score
