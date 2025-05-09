@@ -1,15 +1,13 @@
-from correctness import CorrectnessService
-
-correctness_service = CorrectnessService()
-
-CORRECTNESS_WEIGHT = 0.25
-CLARITY_WEIGHT = 0.25
-VOCABULARY_WEIGHT = 0.20
-COHERENCE_WEIGHT = 0.3
+from models import GlobalScore
 
 
 def get_correctness_score(text: str):
-    return correctness_service.compute_score(text)
+    from correctness import CorrectnessService
+
+    correctness_service = CorrectnessService()
+    score = correctness_service.compute_score(text)
+
+    return score
 
 
 def get_clarity_score(text: str):
@@ -17,37 +15,28 @@ def get_clarity_score(text: str):
 
 
 def get_vocabulary_score(text: str):
-    return 100
+    from vocabulary import VocabularyService
+    import spacy
+
+    nlp = spacy.load("en_core_web_sm")
+    vocabulary_service = VocabularyService(nlp=nlp)
+    score = vocabulary_service.analyze(text)
+    return score
 
 
 def get_coherence_score(text: str):
     return 100
 
 
-def compute_global_score(
-    correctness_score: float,
-    clarity_score: float,
-    vocabulary_score: float,
-    coherence_score: float,
-):
-
-    return (
-        (CORRECTNESS_WEIGHT * correctness_score)
-        + (CLARITY_WEIGHT * clarity_score)
-        + (VOCABULARY_WEIGHT * vocabulary_score)
-        + (COHERENCE_WEIGHT * coherence_score)
-    )
+def compute_global_score(text: str):
+    vocabulary_score = get_vocabulary_score(text)
+    correctness_score = get_correctness_score(text)
+    return GlobalScore(vocabulary_score, correctness_score)
 
 
 if __name__ == "__main__":
-    text = """This are not a text with many different typez of errors. 
-    First, there's a spelling error in 'typez'. 
-    Second, there's a grammar error: 'Here is a lot of errors'. 
-    Third, there's a capitaelizatioagagn error: 'i am a bot'. 
-    Fourth, there's a punctduation error: missing comma after 'errors'. 
-    Fifth, there's a style error: using 'a lot' instead of 'many'. 
-    Finally, there's a sentenced strucsture error: 'Hesre is a lot of errors too'.
-    """
 
-    score = get_correctness_score(text)
-    print(score)
+    text = "Quantums computinng is is a multidisciplinary field comprising aspects of computer science, physics, and mathematics that utilizes quantum mechanics to solve complex problems faster than on classical computers. The field of quantum computing includes hardware research and application development. Quantum computers are able to solve certain types of problems faster than classical computers by taking advantage of quantum mechanical effects, such as superposition and quantum interference. Some applications where quantum computers can provide such a speed boost include machine learning (ML), optimization, and simulation of physical systems. Eventual use cases could be portfolio optimization in finance or the simulation of chemical systems, solving problems that are currently impossible for even the most powerful supercomputers on the market."
+    text1 = "This is a multi-disciplinary field with a simple sentence with some repeated repeated words. "
+
+    print(compute_global_score(text1))
