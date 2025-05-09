@@ -80,6 +80,14 @@ class CorrectnessService:
         Returns:
             CorrectnessResult object with score and breakdown
         """
+        if word_count == 0:
+            return CorrectnessResult(
+                score=0,
+                word_count=0,
+                normalized_penalty=0,
+                issues=[],
+                breakdown=[],
+            )
         categories = {}
         total_penalty = 0
 

@@ -54,6 +54,12 @@ class PrecisionChecker:
 
         doc: Doc = self.nlp(text)
         word_count = len([_ for _ in doc if _.is_alpha])
+
+        if word_count == 0:
+            return PrecisionResult(
+                score=0, word_count=0, normalized_penalty=0, issues=[], breakdown=[]
+            )
+
         total_penalty = sum(category_penalties.values())
         normalized_penalty = round(total_penalty / max(word_count, 1), 4)
         score = round(1.0 - normalized_penalty, 4)
