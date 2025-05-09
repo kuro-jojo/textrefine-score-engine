@@ -4,13 +4,24 @@ from correctness.models import CorrectnessResult
 # from coherence import CoherenceResult
 from vocabulary.models import VocabularyResult
 
-CORRECTNESS_WEIGHT: float = 0.25
+CORRECTNESS_WEIGHT: float = 0.5 # TODO : just for now
 CLARITY_WEIGHT: float = 0.25
-VOCABULARY_WEIGHT: float = 0.20
+VOCABULARY_WEIGHT: float = 0.5 # TODO : just for now
 COHERENCE_WEIGHT: float = 0.3
 
 
 class GlobalScore:
+    """
+    Represents the global score of a text.
+
+    Attributes:
+        score: Overall score of the text
+        vocabulary: VocabularyResult object containing the vocabulary score
+        correctness: CorrectnessResult object containing the correctness score
+        # clarity: ClarityResult object containing the clarity score
+        # coherence: CoherenceResult object containing the coherence score
+    """
+
     score: float
     vocabulary: VocabularyResult
     correctness: CorrectnessResult
@@ -41,6 +52,6 @@ class GlobalScore:
             + " % "
             + "-" * 8
             + "\n"
-            f"\t{self.vocabulary}"
             f"\t{self.correctness}"
+            f"\t{self.vocabulary}"
         )

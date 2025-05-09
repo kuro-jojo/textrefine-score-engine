@@ -5,7 +5,7 @@ from pydantic import BaseModel
 class ErrorCategory(Enum):
     GRAMMAR_RULES = ("Grammar Rules", 4)
     MECHANICS = ("Mechanics", 2)
-    SPELLING_TYPING = ("Spelling & Typos", 3)
+    SPELLING_TYPING = ("Spelling & Typos", 2)
     WORD_USAGE = ("Word Usage", 3)
     MEANING_LOGIC = ("Meaning & Logic", 5)
     STYLISTIC_ISSUES = ("Stylistic Issues", 2)
@@ -63,7 +63,7 @@ class TextIssue(BaseModel):
         category: The category of the issue
         rule_issue_type: The rule issue type of the issue (e.g. grammar, spelling)
     """
-
+    original_text: str
     message: str
     replacements: List[str]
     error_text: str

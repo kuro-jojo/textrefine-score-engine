@@ -19,9 +19,10 @@ from vocabulary.models import SophisticationLevel, SophisticationResult
 COMMON_THRESHOLD = 5.0
 MID_THRESHOLD = 3.5
 
-RARE_WEIGHT = 3.0
-MID_WEIGHT = 1.5
-COMMON_WEIGHT = 1.0
+RARE_WEIGHT = 1.5
+MID_WEIGHT = 1.0
+COMMON_WEIGHT = 0.5
+# MAX_SOPHISTICATION = 1.5  # cap based on expected range
 
 
 class SophisticationChecker:
@@ -32,15 +33,13 @@ class SophisticationChecker:
     very common words and 1 is a text with only very rare words.
     """
 
-    def __init__(self, nlp: Language, exclude_stopwords: bool = True):
+    def __init__(self, nlp: Language):
         """
         Initializes the evaluator.
 
         :param nlp: The spaCy language model
-        :param exclude_stopwords: If True, exclude stopwords from the calculation
         """
         self.nlp = nlp
-        self.exclude_stopwords = exclude_stopwords
 
     def evaluate(self, text: str) -> SophisticationResult:
         """
@@ -53,22 +52,21 @@ class SophisticationChecker:
         doc: Doc = self.nlp(text)
 
         # Get total word count (including stopwords)
-        total_words = len([token for token in doc if not token.is_punct])
-
+        tokens = [
+            token.text.lower() for token in doc if token.is_alpha and not token.is_stop
+        ]
+        total_words = len(tokens)
         sophistication_counts = {"common": 0, "mid": 0, "rare": 0}
 
         # Process meaningful words only
-        for token in doc:
-            if not (token.is_stop or token.is_punct or token.is_space):
-                zipf_value = zipf_frequency(
-                    token.text.lower(), minimum=0, lang=self.nlp.lang
-                )
-                if zipf_value >= COMMON_THRESHOLD:
-                    sophistication_counts["common"] += 1
-                elif MID_THRESHOLD <= zipf_value < COMMON_THRESHOLD:
-                    sophistication_counts["mid"] += 1
-                else:
-                    sophistication_counts["rare"] += 1
+        for token in tokens:
+            zipf_value = zipf_frequency(token, minimum=0, lang=self.nlp.lang)
+            if zipf_value >= COMMON_THRESHOLD:
+                sophistication_counts["common"] += 1
+            elif MID_THRESHOLD <= zipf_value < COMMON_THRESHOLD:
+                sophistication_counts["mid"] += 1
+            else:
+                sophistication_counts["rare"] += 1
 
         # Calculate sophistication score with length adjustment
         sophistication_score, sophistication_level = self.compute_sophistication_score(
@@ -164,6 +162,7 @@ class SophisticationChecker:
 
         adjusted_score = weighted_score * ratio_adjustment
 
+        # normalized_score = round(min(1.0, adjusted_score / MAX_SOPHISTICATION), 4) # cap based on expected range
         normalized_score = round(min(1.0, adjusted_score), 4)
 
         return normalized_score

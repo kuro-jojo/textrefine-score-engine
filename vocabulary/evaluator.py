@@ -17,7 +17,7 @@ class VocabularyEvaluator:
         # Initialize all the necessary checkers for each component
         self.lexical_diversity_checker = LexicalDiversityCalculator(nlp=nlp)
         self.sophistication_checker = SophisticationChecker(nlp=nlp)
-        self.precision_checker = PrecisionChecker(lang=lang)
+        self.precision_checker = PrecisionChecker(nlp=nlp, lang=lang)
 
     def evaluate(self, text: str) -> VocabularyResult:
         """

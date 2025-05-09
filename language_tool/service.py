@@ -89,6 +89,7 @@ class LanguageToolService:
                 error_text=match.context,
                 error_length=match.errorLength,
                 start_offset=match.offset,
+                original_text=text,
                 category=ErrorCategory.from_language_tool_category(match.category),
                 rule_issue_type=f"{match.category} - {match.ruleIssueType}",
             )

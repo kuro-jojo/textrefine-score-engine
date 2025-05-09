@@ -1,10 +1,19 @@
+"""
+Module for computing text correctness scores using LanguageTool.
+
+This module provides services for analyzing text for grammatical and stylistic issues,
+computing correctness scores, and generating detailed breakdowns of potential issues.
+"""
+
+import logging
 from typing import List, Optional
 from functools import lru_cache
+
+from language_tool_python.utils import LanguageToolError
 
 from commons.models import TextIssue
 from correctness.models import CorrectnessResult, CorrectnessScoreBreakdown
 from language_tool.service import language_tool_service
-import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -21,6 +30,16 @@ class CorrectnessService:
         self._language_tool_service.set_language(language)
 
     def compute_score(self, text: str) -> Optional[CorrectnessResult]:
+        """
+        Compute the correctness score for the given text.
+
+        Args:
+            text: The text to analyze
+
+        Returns:
+            CorrectnessResult object containing the score and issues,
+            or None if error occurs
+        """
         return self._compute_score(text)
 
     def _compute_score_impl(self, text: str) -> Optional[CorrectnessResult]:
@@ -41,8 +60,11 @@ class CorrectnessService:
             # )
             return result
 
-        except Exception as e:
-            logger.error(f"Error computing correctness score: {e}")
+        except LanguageToolError as e:
+            logger.error("Error calling LanguageTool API: %s", str(e))
+            return None
+        except Exception as e:  # pylint: disable=broad-except
+            logger.error("Error computing correctness score: %s", str(e))
             return None
 
     def _score_text_issues(
