@@ -1,6 +1,14 @@
 # TextRefine
 
-TextRefine is an AI-powered text analysis and scoring engine designed to evaluate text quality across multiple dimensions. The engine provides detailed scores and feedback to help improve writing quality.
+TextRefine is a text analysis and scoring engine that evaluates writing quality across multiple dimensions. The engine provides quantitative scores and qualitative feedback to help identify areas for improvement in written content.
+
+In simpler terms, TextRefine checks your writing in four different ways:
+- How correct it is (spelling, grammar, punctuation)
+- How good your vocabulary is
+- How clear it is to read
+- How well it flows together
+
+This helps you see what parts of your writing need improvement.
 
 ## Scoring Components
 
