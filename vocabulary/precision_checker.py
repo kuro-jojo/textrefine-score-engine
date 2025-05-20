@@ -57,7 +57,12 @@ class PrecisionChecker:
 
         if word_count == 0:
             return PrecisionResult(
-                score=0, word_count=0, normalized_penalty=0, issues=[], breakdown=[]
+                score=0,
+                word_count=0,
+                normalized_penalty=0,
+                issues=[],
+                breakdown=[],
+                original_text="",
             )
 
         total_penalty = sum(category_penalties.values())
@@ -79,4 +84,5 @@ class PrecisionChecker:
             normalized_penalty=normalized_penalty,
             issues=relevant_issues,
             breakdown=breakdown,
+            original_text=text if relevant_issues else "",
         )

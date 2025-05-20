@@ -28,6 +28,7 @@ class CorrectnessResult(BaseModel):
         normalized_penalty: Overall penalty of the issues in the text
         issues: List of all issues found in the text
         breakdown: Breakdown of issues by category
+        original_text: Original text that was analyzed
     """
 
     score: float
@@ -35,11 +36,12 @@ class CorrectnessResult(BaseModel):
     normalized_penalty: float
     issues: List[TextIssue]
     breakdown: List[CorrectnessScoreBreakdown]
+    original_text: str
 
     def __str__(self) -> str:
         issues_str = "\n".join(
             [
-                f"\t- {issue.message} (Category: {issue.category.label}, Severity: {issue.category.severity}, Rule issue type: {issue.rule_issue_type}, Location: {issue.start_offset}-{issue.end_offset}, Word: {issue.original_text[issue.start_offset:issue.end_offset]})"
+                f"\t- {issue.message} (Category: {issue.category.label}, Severity: {issue.category.severity}, Rule issue type: {issue.rule_issue_type}, Location: {issue.start_offset}-{issue.end_offset}, Word: {self.original_text[issue.start_offset:issue.end_offset]})"
                 for issue in self.issues
             ]
         )

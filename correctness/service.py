@@ -6,12 +6,13 @@ computing correctness scores, and generating detailed breakdowns of potential is
 """
 
 import logging
-from typing import List, Optional
+from typing import List, Optional, Set
 from functools import lru_cache
+from rapidfuzz.distance import Levenshtein
 
 from language_tool_python.utils import LanguageToolError
 
-from commons.models import TextIssue
+from commons.models import ErrorCategory, TextIssue
 from correctness.models import CorrectnessResult, CorrectnessScoreBreakdown
 from language_tool.service import language_tool_service
 
@@ -21,7 +22,7 @@ logger.setLevel(logging.INFO)
 
 class CorrectnessService:
     """
-    Service for computing text correctness scores.
+    Service for analyzing text for correctness.
     """
 
     def __init__(self, language: str = "en-US"):
@@ -29,9 +30,9 @@ class CorrectnessService:
         self._language_tool_service = language_tool_service
         self._language_tool_service.set_language(language)
 
-    def compute_score(self, text: str) -> Optional[CorrectnessResult]:
+    def analyze(self, text: str) -> Optional[CorrectnessResult]:
         """
-        Compute the correctness score for the given text.
+        Analyze the text for correctness.
 
         Args:
             text: The text to analyze
@@ -44,7 +45,7 @@ class CorrectnessService:
 
     def _compute_score_impl(self, text: str) -> Optional[CorrectnessResult]:
         """
-        Compute the correctness score for the given text using LanguageTool.
+        Analyze the text for correctness using LanguageTool.
 
         Args:
             text: The text to analyze
@@ -54,7 +55,7 @@ class CorrectnessService:
         """
         try:
             issues = self._language_tool_service.get_text_issues(text)
-            result = self._score_text_issues(len(text.split()), issues)
+            result = self._score_text_issues(text, issues)
             # logger.info(
             #     f"Computed correctness score: {result.score} for text: {text[:30]}..."
             # )
@@ -68,18 +69,19 @@ class CorrectnessService:
             return None
 
     def _score_text_issues(
-        self, word_count: int, issues: List[TextIssue]
+        self, text: str, issues: List[TextIssue]
     ) -> CorrectnessResult:
         """
         Score text issues by category and type.
 
         Args:
-            word_count: Number of words in the text
+            text: The text to analyze
             issues: List of TextIssue objects
 
         Returns:
             CorrectnessResult object with score and breakdown
         """
+        word_count = len(text.split())
         if word_count == 0:
             return CorrectnessResult(
                 score=0,
@@ -87,6 +89,7 @@ class CorrectnessService:
                 normalized_penalty=0,
                 issues=[],
                 breakdown=[],
+                original_text="",
             )
         categories = {}
         total_penalty = 0
@@ -112,4 +115,35 @@ class CorrectnessService:
             normalized_penalty=normalized_penalty,
             issues=issues,
             breakdown=list(categories.values()),
+            original_text=text,
         )
+
+    def get_replacement_words(self, text: str, issues: List[TextIssue]) -> Set[str]:
+        """
+        Get the set of invalid words - words that are not spelled correctly or are not valid words.
+
+        Args:
+            issues: List of TextIssue objects
+        Returns:
+            Set of invalid words
+        """
+        words = set()
+        for issue in issues:
+            valid, replacement = self.is_valid_typo(text, issue)
+            if valid:
+                words.add(replacement)
+        return words
+
+    def is_valid_typo(self, text: str, issue: TextIssue) -> tuple[bool, tuple[str, str] | None]:
+        """
+        Determines if a typo issue is close enough to be recoverable
+        and can be retained for sophistication scoring.
+        """
+        if issue.category == ErrorCategory.SPELLING_TYPING:
+            for replacement in issue.replacements:
+                word = text[issue.start_offset:issue.end_offset]
+                d = Levenshtein.distance(word, replacement)
+                if d <= 1:
+                    return True, (word, replacement)
+            return False, None
+        return False, None

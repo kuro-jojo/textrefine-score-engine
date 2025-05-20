@@ -37,13 +37,13 @@ class TestCorrectnessService(unittest.TestCase):
             mock_check.return_value = [self.test_match]
 
             # First call should compute
-            result1 = self.service.compute_score(self.test_text)
+            result1 = self.service.analyze(self.test_text)
             self.assertIsNotNone(result1)
             self.assertEqual(mock_check.call_count, 1)
             self.assertEqual(mock_check.call_args[0][0], self.test_text)
 
             # Second call should use cache
-            result2 = self.service.compute_score(self.test_text)
+            result2 = self.service.analyze(self.test_text)
             self.assertEqual(result1, result2)
             self.assertEqual(mock_check.call_count, 1)  # Still only called once
 
@@ -57,12 +57,12 @@ class TestCorrectnessService(unittest.TestCase):
             cache_size = 128
             texts = [f"Text {i}" for i in range(cache_size + 1)]
             for text in texts:
-                self.service.compute_score(text)
+                self.service.analyze(text)
 
             # The first text should no longer be in cache
             mock_check.reset_mock()
             mock_check.return_value = []  # Return empty for no issues
-            result3 = self.service.compute_score(self.test_text)
+            result3 = self.service.analyze(self.test_text)
             self.assertEqual(mock_check.call_count, 1)  # Cache was evicted
             self.assertEqual(result3.score, 1.0)  # No issues means perfect score
 
@@ -71,7 +71,7 @@ class TestCorrectnessService(unittest.TestCase):
         with patch("language_tool.service.language_tool_service.check") as mock_check:
             mock_check.return_value = []
 
-            result = self.service.compute_score(self.test_text)
+            result = self.service.analyze(self.test_text)
             self.assertIsNotNone(result)
             self.assertEqual(result.score, 1.0)
             self.assertEqual(result.normalized_penalty, 0)
@@ -120,7 +120,7 @@ class TestCorrectnessService(unittest.TestCase):
         with patch("language_tool.service.language_tool_service.check") as mock_check:
             mock_check.return_value = mock_matches
 
-            result = self.service.compute_score(self.test_text)
+            result = self.service.analyze(self.test_text)
             self.assertIsNotNone(result)
 
             # Verify issues are converted correctly
@@ -155,7 +155,7 @@ class TestCorrectnessService(unittest.TestCase):
         with patch("language_tool.service.language_tool_service.check") as mock_check:
             mock_check.side_effect = Exception("Mocked LanguageTool error")
 
-            result = self.service.compute_score(self.test_text)
+            result = self.service.analyze(self.test_text)
             self.assertIsNone(result)
 
     def test_score_normalization(self):
@@ -171,11 +171,12 @@ class TestCorrectnessService(unittest.TestCase):
             category=ErrorCategory.SPELLING_TYPING,
             rule_issue_type="TYPOS",
         )
-
+        short_text = "This is a short text"
+        long_text = "This is a long text with many words"
         # Short text (5 words)
-        short_result = self.service._score_text_issues(5, [issue])
+        short_result = self.service._score_text_issues(short_text, [issue])
         # Long text (100 words)
-        long_result = self.service._score_text_issues(100, [issue])
+        long_result = self.service._score_text_issues(long_text, [issue])
 
         # Short text should have higher penalty and lower score
         self.assertGreater(
@@ -208,7 +209,7 @@ class TestCorrectnessService(unittest.TestCase):
             ),
         ]
 
-        result = self.service._score_text_issues(10, issues)
+        result = self.service._score_text_issues(self.test_text, issues)
 
         # Verify breakdown
         self.assertEqual(len(result.breakdown), 2)
@@ -225,7 +226,3 @@ class TestCorrectnessService(unittest.TestCase):
         )
         self.assertEqual(spelling_breakdown.count, 1)
         self.assertEqual(spelling_breakdown.penalty, 2)
-
-
-if __name__ == "__main__":
-    unittest.main()
