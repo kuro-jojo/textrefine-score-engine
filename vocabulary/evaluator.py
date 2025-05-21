@@ -1,3 +1,4 @@
+from typing import Set
 from spacy.language import Language
 from vocabulary.models import VocabularyResult
 from vocabulary.sophistication_checker import SophisticationChecker
@@ -24,13 +25,16 @@ class VocabularyEvaluator:
         self.sophistication_checker = SophisticationChecker(nlp=nlp)
         self.precision_checker = PrecisionChecker(nlp=nlp, lang=lang)
 
-    def evaluate(self, text: str) -> VocabularyResult:
+    def evaluate(
+        self, text: str, replacement_words: Set[tuple[str, str]] = set()
+    ) -> VocabularyResult:
         """
         Perform vocabulary evaluation on the given text, aggregating scores from
         lexical diversity, word sophistication, and precision.
 
         Args:
             text: Input text to analyze.
+            replacement_words: Set of replacement words to include in the sophistication check.
 
         Returns:
             VocabularyResult: Combined result of all three components.
@@ -39,7 +43,9 @@ class VocabularyEvaluator:
         lexical_diversity_score = self.lexical_diversity_checker.compute(text)
 
         # Step 2: Compute Word Sophistication
-        sophistication_result = self.sophistication_checker.evaluate(text)
+        sophistication_result = self.sophistication_checker.evaluate(
+            text, replacement_words
+        )
 
         # Step 3: Compute Word Precision
         precision_result = self.precision_checker.evaluate(text)

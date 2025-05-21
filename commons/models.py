@@ -2,6 +2,7 @@ from enum import Enum
 from typing import List
 from pydantic import BaseModel
 
+
 class ErrorCategory(Enum):
     GRAMMAR_RULES = ("Grammar Rules", 4)
     MECHANICS = ("Mechanics", 2)
@@ -63,7 +64,7 @@ class TextIssue(BaseModel):
         category: The category of the issue
         rule_issue_type: The rule issue type of the issue (e.g. grammar, spelling)
     """
-    original_text: str
+
     message: str
     replacements: List[str]
     error_text: str

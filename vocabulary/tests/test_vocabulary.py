@@ -44,11 +44,14 @@ def test_sophistication_checker_evaluate(sophistication_checker):
 
 def test_sophistication_checker_compute_score(sophistication_checker):
     # Test with different word count distributions
-    counts = {"common": 5, "mid": 3, "rare": 2}
-    total_words = sum(counts.values())
-
+    words = {
+        "common": ["the", "and", "is", "in", "of", "to", "a", "that", "it", "with"],
+        "mid": ["quick", "brown", "fox", "jumps", "over", "lazy", "dog"],
+        "rare": ["jumps", "over", "lazy", "dog"],
+        "unknown": ["ffa"],
+    }
     score, level = sophistication_checker.compute_sophistication_score(
-        counts, total_words
+        words, len(words)
     )
 
     assert 0 <= score <= 1

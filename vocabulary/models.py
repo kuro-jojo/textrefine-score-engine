@@ -39,6 +39,26 @@ class SophisticationLevel(Enum):
             return SophisticationLevel.ERUDITE
 
 
+class WordFrequencyGroup(Enum):
+    COMMON = "Common"
+    MID = "Mid"
+    RARE = "Rare"
+    UNKNOWN = "Unknown"
+
+
+class SophisticationScoreBreakdown(BaseModel):
+    """
+    Breakdown of sophistication issues by category.
+
+    Attributes:
+        group: WordFrequencyGroup
+        words: List of words in that category
+    """
+
+    group: WordFrequencyGroup
+    words: List[str]
+
+
 class SophisticationResult(BaseModel):
     """
     Represents sophistication analysis of vocabulary.
@@ -50,6 +70,7 @@ class SophisticationResult(BaseModel):
         mid_count: Medium-frequency words
         rare_count: Rare/advanced words
         level: Sophistication level
+        breakdown: List of SophisticationScoreBreakdown objects
     """
 
     score: float
@@ -58,14 +79,20 @@ class SophisticationResult(BaseModel):
     mid_count: int
     rare_count: int
     level: SophisticationLevel
+    breakdown: List[SophisticationScoreBreakdown]
 
     def __str__(self) -> str:
+        breakdown_str = "\n".join(
+            f"\t{b.group.value}: {b.words}" for b in self.breakdown
+        )
         return (
             "\nSophistication Breakdown:\n"
             f"\tScore: {self.score}\n"
             f"\tWord count: {self.word_count}\n"
             f"\tCommon: {self.common_count}, Mid: {self.mid_count}, Rare: {self.rare_count}\n"
             f"\tLevel: {self.level.value}\n"
+            "\nBreakdown:\n"
+            f"{breakdown_str}"
         )
 
 
@@ -101,10 +128,11 @@ class PrecisionResult(BaseModel):
     normalized_penalty: float
     issues: List[TextIssue]
     breakdown: List[PrecisionScoreBreakdown]
+    original_text: str
 
     def __str__(self) -> str:
         issues_str = "\n".join(
-            f"\t- {issue.message} (Category: {issue.category.label}, Severity: {issue.category.severity}, Rule issue type: {issue.rule_issue_type}, Location: {issue.start_offset}-{issue.end_offset}, Word: {issue.original_text[issue.start_offset:issue.end_offset]})"
+            f"\t- {issue.message} (Category: {issue.category.label}, Severity: {issue.category.severity}, Rule issue type: {issue.rule_issue_type}, Location: {issue.start_offset}-{issue.end_offset}, Word: {self.original_text[issue.start_offset:issue.end_offset]})"
             for issue in self.issues
         )
         breakdown_str = "\n".join(
