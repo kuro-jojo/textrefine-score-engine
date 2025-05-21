@@ -134,7 +134,7 @@ class CorrectnessService:
                 words.add(replacement)
         return words
 
-    def is_valid_typo(self, text: str, issue: TextIssue) -> tuple[bool, tuple[str, str] | None]:
+    def is_valid_typo(self, text: str, issue: TextIssue) -> Optional[tuple[bool, tuple[str, str]]]:
         """
         Determines if a typo issue is close enough to be recoverable
         and can be retained for sophistication scoring.

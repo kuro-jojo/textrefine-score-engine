@@ -10,9 +10,9 @@ app = FastAPI(
     version="1.0.0",
 )
 
-origins = [
-    "http://localhost:4200",  # Angular app
-]
+import os
+
+origins = os.getenv("ORIGINS", "http://localhost:4200").split(',')
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,6 +21,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Ensure origins is a list
+if isinstance(origins, str):
+    origins = [origins]
 
 app.include_router(evaluation.router, prefix="/api/v1")
 handler = Mangum(app)
