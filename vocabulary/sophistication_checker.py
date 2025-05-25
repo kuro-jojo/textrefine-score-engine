@@ -63,6 +63,7 @@ class SophisticationChecker:
                 common_count=0,
                 mid_count=0,
                 rare_count=0,
+                unknown_count=0,
                 word_count=0,
                 level=SophisticationLevel.BASIC,
                 breakdown=[],
@@ -81,6 +82,7 @@ class SophisticationChecker:
                 common_count=0,
                 mid_count=0,
                 rare_count=0,
+                unknown_count=0,
                 word_count=0,
                 level=SophisticationLevel.BASIC,
                 breakdown=[],
@@ -121,6 +123,7 @@ class SophisticationChecker:
             common_count=len(sophistication_words["common"]),
             mid_count=len(sophistication_words["mid"]),
             rare_count=len(sophistication_words["rare"]),
+            unknown_count=len(sophistication_words["unknown"]),
             word_count=word_count,
             level=sophistication_level,
             breakdown=[
