@@ -69,6 +69,7 @@ class SophisticationResult(BaseModel):
         common_count: Words with high frequency
         mid_count: Medium-frequency words
         rare_count: Rare/advanced words
+        unknown_count: Unknown words
         level: Sophistication level
         breakdown: List of SophisticationScoreBreakdown objects
     """
@@ -78,6 +79,7 @@ class SophisticationResult(BaseModel):
     common_count: int
     mid_count: int
     rare_count: int
+    unknown_count: int
     level: SophisticationLevel
     breakdown: List[SophisticationScoreBreakdown]
 
@@ -89,7 +91,7 @@ class SophisticationResult(BaseModel):
             "\nSophistication Breakdown:\n"
             f"\tScore: {self.score}\n"
             f"\tWord count: {self.word_count}\n"
-            f"\tCommon: {self.common_count}, Mid: {self.mid_count}, Rare: {self.rare_count}\n"
+            f"\tCommon: {self.common_count}, Mid: {self.mid_count}, Rare: {self.rare_count}, Unknown: {self.unknown_count}\n"
             f"\tLevel: {self.level.value}\n"
             "\nBreakdown:\n"
             f"{breakdown_str}"
