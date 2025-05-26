@@ -4,11 +4,12 @@ from pydantic import BaseModel
 
 
 class ErrorCategory(Enum):
-    GRAMMAR_RULES = ("Grammar Rules", 4)
-    MECHANICS = ("Mechanics", 2)
-    SPELLING_TYPING = ("Spelling & Typos", 2)
-    WORD_USAGE = ("Word Usage", 3)
+    GRAMMAR_RULES = ("Grammar Rules", 5)
     MEANING_LOGIC = ("Meaning & Logic", 5)
+    SPELLING_TYPING = ("Spelling & Typos", 4)
+    CONFUSED_WORDS = ("Confused Words", 4)
+    MECHANICS = ("Mechanics", 3)
+    WORD_USAGE = ("Word Usage", 3)
     STYLISTIC_ISSUES = ("Stylistic Issues", 2)
     CONTEXTUAL_STYLE = ("Contextual Style", 1)
 
@@ -21,16 +22,19 @@ class ErrorCategory(Enum):
         category = category.upper()
 
         # Map actual LanguageTool categories to TextRefine's internal groups
-        if category in {"GRAMMAR", "CASING"}:
+        if category in {"GRAMMAR"}:
             return cls.GRAMMAR_RULES
 
-        if category in {"PUNCTUATION", "TYPOGRAPHY", "COMPOUNDING"}:
+        if category in {"PUNCTUATION", "TYPOGRAPHY", "COMPOUNDING", "CASING"}:
             return cls.MECHANICS
 
         if category in {"TYPOS"}:
             return cls.SPELLING_TYPING
 
-        if category in {"CONFUSED_WORDS", "COLLOQUIALISMS", "REDUNDANCY"}:
+        if category in {"CONFUSED_WORDS"}:
+            return cls.CONFUSED_WORDS
+
+        if category in {"COLLOQUIALISMS", "REDUNDANCY"}:
             return cls.WORD_USAGE
 
         if category in {"FALSE_FRIENDS", "REGIONALISMS"}:

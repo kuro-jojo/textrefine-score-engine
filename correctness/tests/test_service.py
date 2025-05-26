@@ -137,8 +137,8 @@ class TestCorrectnessService(unittest.TestCase):
             )
             self.assertEqual(grammar_breakdown.count, 1)
             self.assertEqual(
-                grammar_breakdown.penalty, 4
-            )  # Grammar rules have severity 4
+                grammar_breakdown.penalty, 5
+            )  # Grammar rules have severity 5
 
             spelling_breakdown = next(
                 bd
@@ -147,8 +147,8 @@ class TestCorrectnessService(unittest.TestCase):
             )
             self.assertEqual(spelling_breakdown.count, 1)
             self.assertEqual(
-                spelling_breakdown.penalty, 2
-            )  # Spelling errors have severity 3
+                spelling_breakdown.penalty, 4
+            )  # Spelling errors have severity 4
 
     def test_compute_score_error_handling(self):
         """Test error handling in compute_score"""
@@ -217,7 +217,7 @@ class TestCorrectnessService(unittest.TestCase):
             bd for bd in result.breakdown if bd.category == ErrorCategory.GRAMMAR_RULES
         )
         self.assertEqual(grammar_breakdown.count, 1)
-        self.assertEqual(grammar_breakdown.penalty, 4)
+        self.assertEqual(grammar_breakdown.penalty, 5)
 
         spelling_breakdown = next(
             bd
@@ -225,4 +225,4 @@ class TestCorrectnessService(unittest.TestCase):
             if bd.category == ErrorCategory.SPELLING_TYPING
         )
         self.assertEqual(spelling_breakdown.count, 1)
-        self.assertEqual(spelling_breakdown.penalty, 2)
+        self.assertEqual(spelling_breakdown.penalty, 4)
