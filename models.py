@@ -9,7 +9,7 @@ CORRECTNESS_WEIGHT: float = 0.5  # TODO : just for now
 CLARITY_WEIGHT: float = 0.25
 VOCABULARY_WEIGHT: float = 0.5  # TODO : just for now
 COHERENCE_WEIGHT: float = 0.3
-MIN_WORD_COUNT: int = 100
+MIN_WORD_COUNT: int = 20
 
 
 class GlobalScore(BaseModel):

@@ -70,9 +70,15 @@ class SophisticationChecker:
             )
 
         doc: Doc = self.nlp(text)
-        words = [
-            token.text.lower() for token in doc if token.is_alpha and not token.is_stop
-        ]
+        words = list(
+            set(
+                [
+                    token.text.lower()
+                    for token in doc
+                    if token.is_alpha and not token.is_stop
+                ]
+            )
+        )
 
         word_count = len(words)
 
