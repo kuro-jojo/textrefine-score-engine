@@ -27,7 +27,7 @@ class LanguageToolService:
         """
         cls._language = language
         if cls._instance and cls._language != cls._instance._language:
-            cls._instance._reinitialize_tool()
+            cls._instance._initialize_tool()
 
     def __new__(cls) -> "LanguageToolService":
         if cls._instance is None:
@@ -38,7 +38,7 @@ class LanguageToolService:
     def _initialize_tool(self) -> None:
         """Initialize the LanguageTool instance."""
         try:
-            self.tool = LanguageTool(self._language)
+            self.tool = LanguageTool(self._language, config={ 'cacheSize': 1000, 'pipelineCaching': True })
             logger.info(
                 f"LanguageTool initialized successfully for language: {self._language}"
             )
@@ -46,17 +46,6 @@ class LanguageToolService:
             logger.error(f"Failed to initialize LanguageTool: {e}")
             raise RuntimeError(
                 f"Failed to initialize LanguageTool for language {self._language}. Is the LanguageTool server running?"
-            )
-
-    def _reinitialize_tool(self) -> None:
-        """Reinitialize the LanguageTool instance with new language."""
-        try:
-            self.tool = LanguageTool(self._language)
-            logger.info(f"LanguageTool reinitialized for language: {self._language}")
-        except Exception as e:
-            logger.error(f"Failed to reinitialize LanguageTool: {e}")
-            raise RuntimeError(
-                f"Failed to reinitialize LanguageTool for language {self._language}. Is the LanguageTool server running?"
             )
 
     def check(self, text: str) -> List[Match]:

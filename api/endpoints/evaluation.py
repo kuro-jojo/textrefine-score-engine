@@ -23,6 +23,11 @@ def evaluate_all(input: TextInput):
 
     correctness = correctness_service.analyze(input.text)
 
+    if(not correctness):
+        raise HTTPException(
+            status_code=500,
+            detail="Error computing correctness score, please try again.",
+        )
     # Get replacement words from correctness result
     replacement_words = correctness_service.get_replacement_words(
         input.text, correctness.issues
