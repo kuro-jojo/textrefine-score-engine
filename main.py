@@ -3,14 +3,19 @@ from api.endpoints import evaluation
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 import uvicorn
+from logging_config import setup_logging
+
+logger = setup_logging()
 
 app = FastAPI(
     title="Text Refine Score Engine API",
-    description="API for scoring text based on correctness and vocabulary.",
+    description="API for scoring text based on correctness, coherence and vocabulary",
     version="1.0.0",
 )
 
 import os
+
+logger.info("Starting Text Refine Score Engine API")
 
 origins = os.getenv("ORIGINS", "http://localhost:4200").split(',')
 
@@ -32,6 +37,7 @@ handler = Mangum(app)
 
 @app.get("/")
 async def root():
+    logger.info("Root endpoint accessed")
     return {"message": "Text Refine Score Engine API"}
 
 
