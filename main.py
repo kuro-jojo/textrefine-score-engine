@@ -9,17 +9,26 @@ from fastapi.middleware.cors import CORSMiddleware
 from logging_config import setup_logging, initialize_log_maintenance
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-import asyncio
+from contextlib import asynccontextmanager
 
 # Add IP filter to logger
 logger = setup_logging()
 ip_filter = ClientIPFilter()
 logger.addFilter(ip_filter)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await initialize_log_maintenance()
+    logger.info("Starting Text Refine Score Engine API")
+    yield
+
+
 app = FastAPI(
     title="Text Refine Score Engine API",
     description="API for scoring text based on correctness, coherence and vocabulary",
     version="1.0.0",
+    lifespan=lifespan,
 )
 app.state.limiter = get_limiter()
 app.add_exception_handler(
@@ -27,13 +36,6 @@ app.add_exception_handler(
     _rate_limit_exceeded_handler,
 )
 
-# Initialize log maintenance
-async def init_app():
-    await initialize_log_maintenance()
-    logger.info("Starting Text Refine Score Engine API")
-    return app
-
-app = asyncio.run(init_app())
 
 origins = os.getenv("ORIGINS", "http://localhost:4200").split(",")
 
@@ -61,4 +63,10 @@ async def set_request_context_middleware(request: Request, call_next):
 app.include_router(api.router, prefix="/api/v1")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000,
+        forwarded_allow_ips="127.0.0.1,172.17.0.0/16",
+        proxy_headers=True,
+    )

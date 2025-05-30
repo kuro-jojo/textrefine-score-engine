@@ -37,4 +37,4 @@ ENV LTP_PATH="/opt/language_tool_python"
 COPY . .
 
 # Command to run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=172.17.0.0/16,127.0.0.1"]

@@ -9,7 +9,10 @@ router = APIRouter()
 
 @router.get("/health")
 @router.get("/")
-@get_limiter().limit("100/minute", error_message="Too many requests. Please try again later.")
+@get_limiter().limit(
+    "100/minute",
+    error_message="Limit set to 100 requests per minute. Please try again later.",
+)
 async def health_check(request: Request):
-    logger.info("Health check endpoint accessed")
+    logger.info("Health endpoint accessed. Text Refine Score Engine is healthy")
     return {"status": "healthy", "service": "Text Refine Score Engine"}

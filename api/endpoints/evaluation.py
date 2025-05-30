@@ -18,12 +18,12 @@ vocabulary_service = VocabularyService(nlp=nlp)
 
 @router.post("/evaluation", response_model=GlobalScore)
 @get_limiter().limit(
-    "5/minute", error_message="Too many requests. Please try again later."
+    "5/minute", error_message="Limit set to 5 requests per minute. Please try again later."
 )
 def evaluate_all(request: Request, input: TextInput):
     try:
         start_time = time.time()
-        logger.info(f"Starting evaluation for text: {input.text[:100]}...")
+        logger.info(f"Starting evaluation for text: {input.text[:10]}...")
         word_count = len(input.text.split())
 
         if word_count < MIN_WORD_COUNT:
