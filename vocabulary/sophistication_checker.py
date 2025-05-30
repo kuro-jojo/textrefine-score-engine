@@ -10,10 +10,12 @@ The class also provides a method for computing the sophistication score of a tex
 """
 
 import math
-from typing import Literal, Set
+from typing import List, Literal, Set, Optional
+from rapidfuzz.distance import Levenshtein
 from spacy.language import Language
 from spacy.tokens import Doc
 from wordfreq import zipf_frequency
+from commons.models import ErrorCategory, TextIssue
 from vocabulary.models import (
     SophisticationLevel,
     SophisticationResult,
@@ -46,17 +48,49 @@ class SophisticationChecker:
         """
         self.nlp = nlp
 
+    def _is_valid_typo(
+        self, text: str, issue: TextIssue
+    ) -> Optional[tuple[bool, tuple[str, str]]]:
+        """
+        Determines if a typo issue is close enough to be recoverable
+        and can be retained for sophistication scoring.
+        """
+        if issue.category == ErrorCategory.SPELLING_TYPING:
+            for replacement in issue.replacements:
+                word = text[issue.start_offset : issue.end_offset]
+                d = Levenshtein.distance(word, replacement)
+                if d <= 1:
+                    return True, (word, replacement)
+        return False, None
+
+    def _get_replacement_words(self, text: str, issues: List[TextIssue]) -> Set[str]:
+        """
+        Get the set of invalid words - words that are not spelled correctly or are not valid words.
+
+        Args:
+            issues: List of TextIssue objects
+        Returns:
+            Set of invalid words
+        """
+        words = set()
+        for issue in issues:
+            valid, replacement = self._is_valid_typo(text, issue)
+            if valid:
+                words.add(replacement)
+        return words
+
     def evaluate(
-        self, text: str = "", replacement_words: Set[tuple[str, str]] = set()
+        self, text: str = "", issues: List[TextIssue] = []
     ) -> SophisticationResult:
         """
         Evaluates the sophistication of a text.
 
         :param text: The input text
-        :param replacement_words: Set of replacement words to include in the sophistication check.
+        :param issues: List of TextIssue objects
         :return: A SophisticationResult object containing the sophistication score,
                  counts of common, mid and rare words, and the total word count
         """
+        replacement_words = self._get_replacement_words(text, issues)
         if not text and not replacement_words:
             return SophisticationResult(
                 score=0,

@@ -1,7 +1,10 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 from language_tool_python import LanguageTool, Match
 import logging
-
+from collections import OrderedDict
+import asyncio
+import time
+import spacy
 from commons.models import ErrorCategory, TextIssue
 
 logger = logging.getLogger(__name__)
@@ -15,16 +18,12 @@ class LanguageToolService:
 
     _instance: Optional["LanguageToolService"] = None
     tool: LanguageTool
-    _language: str = "en-US"  # Default language
+    _language: str = "en-US"
+    _cache: OrderedDict = OrderedDict()
+    _cache_size: int = 1000
 
     @classmethod
     def set_language(cls, language: str) -> None:
-        """
-        Set the language for LanguageTool.
-
-        Args:
-            language: Language code (e.g., "en-US", "fr-FR", "es-ES")
-        """
         cls._language = language
         if cls._instance and cls._language != cls._instance._language:
             cls._instance._initialize_tool()
@@ -38,7 +37,14 @@ class LanguageToolService:
     def _initialize_tool(self) -> None:
         """Initialize the LanguageTool instance."""
         try:
-            self.tool = LanguageTool(self._language, config={ 'cacheSize': 1000, 'pipelineCaching': True })
+            self.tool = LanguageTool(
+                self._language,
+                config={
+                    "cacheSize": 5000,
+                    "pipelineCaching": True,
+                    "timeoutRequestLimit": 5000,
+                },
+            )
             logger.info(
                 f"LanguageTool initialized successfully for language: {self._language}"
             )
@@ -48,17 +54,31 @@ class LanguageToolService:
                 f"Failed to initialize LanguageTool for language {self._language}. Is the LanguageTool server running?"
             )
 
-    def check(self, text: str) -> List[Match]:
+    async def check(self, text: str) -> List[Match]:
         """
         Check text for language issues using LanguageTool.
-
-        Args:
-            text: The text to analyze
-
-        Returns:
-            List of Match objects from LanguageTool
         """
-        return self.tool.check(text)
+        try:
+            if not text:
+                return []
+
+            # Run LanguageTool check in a separate thread using asyncio
+            # This is important because:
+            # 1. LanguageTool is a CPU-bound operation that can block the main thread
+            # 2. asyncio.to_thread() runs it in a separate thread to keep the main thread responsive
+            # 3. asyncio.wait_for() provides timeout handling to prevent hanging
+            # 4. asyncio.shield() prevents the operation from being cancelled prematurely
+            matches = await asyncio.shield(
+                asyncio.wait_for(asyncio.to_thread(self.tool.check, text), timeout=5)
+            )
+            return matches
+
+        except asyncio.TimeoutError:
+            logger.warning("LanguageTool check timed out")
+            return []
+        except Exception as e:
+            logger.error(f"Error checking text: {e}")
+            return []
 
     def get_text_issues(self, text: str) -> List[TextIssue]:
         """
@@ -70,11 +90,11 @@ class LanguageToolService:
         Returns:
             List of TextIssue objects
         """
-        matches = self.check(text)
+        matches = asyncio.run(self.check(text))
         return [
             TextIssue(
                 message=match.message,
-                replacements=[rep for rep in match.replacements],
+                replacements=[rep for rep in match.replacements[:3]],
                 error_text=match.context,
                 error_length=match.errorLength,
                 start_offset=match.offset,

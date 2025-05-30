@@ -15,6 +15,7 @@ from language_tool_python.utils import LanguageToolError
 from commons.models import ErrorCategory, TextIssue
 from correctness.models import CorrectnessResult, CorrectnessScoreBreakdown
 from language_tool.service import language_tool_service
+import spacy
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -25,10 +26,11 @@ class CorrectnessService:
     Service for analyzing text for correctness.
     """
 
-    def __init__(self, language: str = "en-US"):
+    def __init__(self, language: str = "en-US", nlp: Optional[spacy.Language] = None):
         self._compute_score = lru_cache(maxsize=128)(self._compute_score_impl)
         self._language_tool_service = language_tool_service
         self._language_tool_service.set_language(language)
+        self._language_tool_service.nlp = nlp
 
     def analyze(self, text: str) -> Optional[CorrectnessResult]:
         """
@@ -117,33 +119,3 @@ class CorrectnessService:
             breakdown=list(categories.values()),
             original_text=text,
         )
-
-    def get_replacement_words(self, text: str, issues: List[TextIssue]) -> Set[str]:
-        """
-        Get the set of invalid words - words that are not spelled correctly or are not valid words.
-
-        Args:
-            issues: List of TextIssue objects
-        Returns:
-            Set of invalid words
-        """
-        words = set()
-        for issue in issues:
-            valid, replacement = self.is_valid_typo(text, issue)
-            if valid:
-                words.add(replacement)
-        return words
-
-    def is_valid_typo(self, text: str, issue: TextIssue) -> Optional[tuple[bool, tuple[str, str]]]:
-        """
-        Determines if a typo issue is close enough to be recoverable
-        and can be retained for sophistication scoring.
-        """
-        if issue.category == ErrorCategory.SPELLING_TYPING:
-            for replacement in issue.replacements:
-                word = text[issue.start_offset:issue.end_offset]
-                d = Levenshtein.distance(word, replacement)
-                if d <= 1:
-                    return True, (word, replacement)
-            return False, None
-        return False, None

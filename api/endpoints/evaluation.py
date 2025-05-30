@@ -1,41 +1,61 @@
-# api/endpoints/evaluation.py
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from models import MIN_WORD_COUNT, GlobalScore, TextInput
 from correctness import CorrectnessService
 from vocabulary import VocabularyService
 import spacy
+from logging_config import setup_logging
+from ..limiter import get_limiter
+import time
+
+logger = setup_logging()
 
 router = APIRouter()
 
 nlp = spacy.load("en_core_web_sm")
-correctness_service = CorrectnessService()
+correctness_service = CorrectnessService(nlp=nlp)
 vocabulary_service = VocabularyService(nlp=nlp)
 
-@router.post("/evaluate", response_model=GlobalScore)
-def evaluate_all(input: TextInput):
-    word_count = len(input.text.split())
 
-    if word_count < MIN_WORD_COUNT:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Text is too short for evaluation (minimum {MIN_WORD_COUNT} words required).",
+@router.post("/evaluation", response_model=GlobalScore)
+@get_limiter().limit(
+    "5/minute", error_message="Too many requests. Please try again later."
+)
+def evaluate_all(request: Request, input: TextInput):
+    try:
+        start_time = time.time()
+        logger.info(f"Starting evaluation for text: {input.text[:100]}...")
+        word_count = len(input.text.split())
+
+        if word_count < MIN_WORD_COUNT:
+            logger.warning(f"Text too short for evaluation (word count: {word_count})")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Text is too short for evaluation (minimum {MIN_WORD_COUNT} words required).",
+            )
+
+        logger.info("Analyzing correctness...")
+        correctness = correctness_service.analyze(input.text)
+
+        if not correctness:
+            logger.error("Failed to compute correctness score")
+            raise HTTPException(
+                status_code=500,
+                detail="Error computing correctness score, please try again.",
+            )
+
+        logger.info("Analyzing vocabulary (diversity, sophistication, precision)...")
+        vocabulary = vocabulary_service.analyze(input.text, correctness.issues)
+
+        logger.info("Creating global score...")
+        result = GlobalScore(
+            vocabulary=vocabulary,
+            correctness=correctness,
         )
+        
+        logger.info(f"Evaluation completed. Score: {result.score_in_percent}%.")
+        logger.info(f"Response time: {time.time() - start_time:.2f} seconds.")
+        return result
 
-    correctness = correctness_service.analyze(input.text)
-
-    if(not correctness):
-        raise HTTPException(
-            status_code=500,
-            detail="Error computing correctness score, please try again.",
-        )
-    # Get replacement words from correctness result
-    replacement_words = correctness_service.get_replacement_words(
-        input.text, correctness.issues
-    )
-
-    vocabulary = vocabulary_service.analyze(input.text, replacement_words)
-
-    return GlobalScore(
-        vocabulary=vocabulary,
-        correctness=correctness,
-    )
+    except Exception as e:
+        logger.error(f"Error during evaluation: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

@@ -1,9 +1,10 @@
 from collections import defaultdict
 from language_tool.service import language_tool_service
 from vocabulary.models import PrecisionResult, PrecisionScoreBreakdown
-from commons.models import ErrorCategory
+from commons.models import ErrorCategory, TextIssue
 from spacy.language import Language
 from spacy.tokens import Doc
+from typing import List
 
 
 class PrecisionChecker:
@@ -31,7 +32,7 @@ class PrecisionChecker:
             ErrorCategory.STYLISTIC_ISSUES,
         }
 
-    def evaluate(self, text: str) -> PrecisionResult:
+    def evaluate(self, text: str, issues: List[TextIssue] = []) -> PrecisionResult:
         """
         Evaluates the precision of a text.
 
@@ -39,13 +40,14 @@ class PrecisionChecker:
         :return: A PrecisionResult object containing the precision score, word count,
                  normalized penalty, and a list of relevant issues
         """
-        issues_raw = self.language_tool.get_text_issues(text)
+        if not issues:
+            issues = self.language_tool.get_text_issues(text)
 
         relevant_issues = []
         category_counts = defaultdict(int)
         category_penalties = defaultdict(float)
 
-        for issue in issues_raw:
+        for issue in issues:
 
             if issue.category in self.precision_categories:
                 relevant_issues.append(issue)
