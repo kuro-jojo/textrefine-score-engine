@@ -155,8 +155,7 @@ class TestCorrectnessService(unittest.TestCase):
         with patch("language_tool.service.language_tool_service.check") as mock_check:
             mock_check.side_effect = Exception("Mocked LanguageTool error")
 
-            result = self.service.analyze(self.test_text)
-            self.assertIsNone(result)
+            self.assertRaises(Exception, self.service.analyze, self.test_text)
 
     def test_score_normalization(self):
         """Test that scores are normalized based on word count"""

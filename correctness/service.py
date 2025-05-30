@@ -6,13 +6,10 @@ computing correctness scores, and generating detailed breakdowns of potential is
 """
 
 import logging
-from typing import List, Optional, Set
+from typing import List, Optional
 from functools import lru_cache
-from rapidfuzz.distance import Levenshtein
 
-from language_tool_python.utils import LanguageToolError
-
-from commons.models import ErrorCategory, TextIssue
+from commons.models import TextIssue
 from correctness.models import CorrectnessResult, CorrectnessScoreBreakdown
 from language_tool.service import language_tool_service
 import spacy
@@ -32,7 +29,7 @@ class CorrectnessService:
         self._language_tool_service.set_language(language)
         self._language_tool_service.nlp = nlp
 
-    def analyze(self, text: str) -> Optional[CorrectnessResult]:
+    def analyze(self, text: str) -> CorrectnessResult:
         """
         Analyze the text for correctness.
 
@@ -40,12 +37,11 @@ class CorrectnessService:
             text: The text to analyze
 
         Returns:
-            CorrectnessResult object containing the score and issues,
-            or None if error occurs
+            CorrectnessResult object containing the score and issues
         """
         return self._compute_score(text)
 
-    def _compute_score_impl(self, text: str) -> Optional[CorrectnessResult]:
+    def _compute_score_impl(self, text: str) -> CorrectnessResult:
         """
         Analyze the text for correctness using LanguageTool.
 
@@ -53,22 +49,11 @@ class CorrectnessService:
             text: The text to analyze
 
         Returns:
-            CorrectnessResult object containing the score and issues, or None if error occurs
+            CorrectnessResult object containing the score and issues
         """
-        try:
-            issues = self._language_tool_service.get_text_issues(text)
-            result = self._score_text_issues(text, issues)
-            # logger.info(
-            #     f"Computed correctness score: {result.score} for text: {text[:30]}..."
-            # )
-            return result
-
-        except LanguageToolError as e:
-            logger.error("Error calling LanguageTool API: %s", str(e))
-            return None
-        except Exception as e:  # pylint: disable=broad-except
-            logger.error("Error computing correctness score: %s", str(e))
-            return None
+        issues = self._language_tool_service.get_text_issues(text)
+        result = self._score_text_issues(text, issues)
+        return result
 
     def _score_text_issues(
         self, text: str, issues: List[TextIssue]

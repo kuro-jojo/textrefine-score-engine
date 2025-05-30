@@ -3,8 +3,7 @@ from language_tool_python import LanguageTool, Match
 import logging
 from collections import OrderedDict
 import asyncio
-import time
-import spacy
+from language_tool_python.utils import LanguageToolError
 from commons.models import ErrorCategory, TextIssue
 
 logger = logging.getLogger(__name__)
@@ -69,16 +68,16 @@ class LanguageToolService:
             # 3. asyncio.wait_for() provides timeout handling to prevent hanging
             # 4. asyncio.shield() prevents the operation from being cancelled prematurely
             matches = await asyncio.shield(
-                asyncio.wait_for(asyncio.to_thread(self.tool.check, text), timeout=5)
+                asyncio.wait_for(asyncio.to_thread(self.tool.check, text), timeout=10)
             )
             return matches
 
         except asyncio.TimeoutError:
             logger.warning("LanguageTool check timed out")
-            return []
+            raise LanguageToolError("LanguageTool check timed out")
         except Exception as e:
             logger.error(f"Error checking text: {e}")
-            return []
+            raise e
 
     def get_text_issues(self, text: str) -> List[TextIssue]:
         """
@@ -89,6 +88,9 @@ class LanguageToolService:
 
         Returns:
             List of TextIssue objects
+        Raises:
+            LanguageToolError: If LanguageTool check fails
+            Exception: For other errors
         """
         matches = asyncio.run(self.check(text))
         return [

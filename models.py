@@ -24,8 +24,8 @@ class GlobalScore(BaseModel):
         # coherence: CoherenceResult object containing the coherence score
     """
 
-    vocabulary: VocabularyResult
     correctness: CorrectnessResult
+    vocabulary: VocabularyResult
 
     @computed_field
     @property
