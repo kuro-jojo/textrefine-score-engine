@@ -69,3 +69,5 @@ Dockerfile
 *.tar.gz
 *.tgz
 *.whl
+
+*logs/
