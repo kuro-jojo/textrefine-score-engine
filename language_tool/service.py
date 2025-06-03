@@ -44,6 +44,17 @@ class LanguageToolService:
                     "timeoutRequestLimit": 5000,
                 },
             )
+
+            # Perform a warm-up check
+            try:
+                # Check if the tool is ready by processing a simple text
+                test_text = "This is a test sentence."
+                self.tool.check(test_text)
+                logger.info("LanguageTool warm-up successful")
+            except Exception as warm_up_error:
+                logger.warning(f"LanguageTool warm-up check failed: {warm_up_error}")
+                # Still continue even if warm-up fails, as we want to start the service
+
             logger.info(
                 f"LanguageTool initialized successfully for language: {self._language}"
             )
