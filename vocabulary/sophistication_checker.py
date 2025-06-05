@@ -16,6 +16,7 @@ from spacy.language import Language
 from spacy.tokens import Doc
 from wordfreq import zipf_frequency
 from commons.models import ErrorCategory, TextIssue
+from commons.utils import round_score
 from vocabulary.models import (
     SophisticationLevel,
     SophisticationResult,
@@ -246,7 +247,7 @@ class SophisticationChecker:
         ratio_adjustment = 1 / (1 + math.exp(-5 * (meaningful_ratio - 0.4)))
         adjusted_score = weighted_score * ratio_adjustment
 
-        normalized_score = round(min(1.0, math.sqrt(adjusted_score)), 4)
+        normalized_score = round_score(min(1.0, math.sqrt(adjusted_score)))
 
         return normalized_score
 
@@ -267,7 +268,7 @@ class SophisticationChecker:
 
         adjusted_score = weighted_score * ratio_adjustment
 
-        # normalized_score = round(min(1.0, adjusted_score / MAX_SOPHISTICATION), 4) # cap based on expected range
-        normalized_score = round(min(1.0, adjusted_score), 4)
+        # normalized_score = round_score(min(1.0, adjusted_score / MAX_SOPHISTICATION), 4) # cap based on expected range
+        normalized_score = round_score(min(1.0, adjusted_score))
 
         return normalized_score

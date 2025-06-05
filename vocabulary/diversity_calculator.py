@@ -1,8 +1,7 @@
-# TTR, MTLD or HD-D calculation logic
-
 from spacy.language import Language
 from spacy.tokens import Doc
 from vocabulary.models import LexicalDiversityResult
+from commons.utils import round_score
 
 
 class LexicalDiversityCalculator:
@@ -37,5 +36,5 @@ class LexicalDiversityCalculator:
         ttr = unique_count / word_count
 
         return LexicalDiversityResult(
-            ttr=round(ttr, 4), word_count=word_count, unique_count=unique_count
+            ttr=round_score(ttr), word_count=word_count, unique_count=unique_count
         )

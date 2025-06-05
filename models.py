@@ -1,14 +1,13 @@
 from pydantic import BaseModel, computed_field
+from commons.utils import round_score
 from correctness.models import CorrectnessResult
-
-# from clarity import ClarityResult
-# from coherence import CoherenceResult
+from readability.models import ReadabilityResult
 from vocabulary.models import VocabularyResult
 
-CORRECTNESS_WEIGHT: float = 0.5  # TODO : just for now
-CLARITY_WEIGHT: float = 0.25
-VOCABULARY_WEIGHT: float = 0.5  # TODO : just for now
-COHERENCE_WEIGHT: float = 0.3
+CORRECTNESS_WEIGHT: float = 0.35
+COHERENCE_WEIGHT: float = 0.25
+VOCABULARY_WEIGHT: float = 0.25
+READABILITY_WEIGHT: float = 0.15
 MIN_WORD_COUNT: int = 20
 
 
@@ -18,13 +17,13 @@ class GlobalScore(BaseModel):
 
     Attributes:
         score: Overall score of the text
-        vocabulary: VocabularyResult object containing the vocabulary score
         correctness: CorrectnessResult object containing the correctness score
-        # clarity: ClarityResult object containing the clarity score
-        # coherence: CoherenceResult object containing the coherence score
+        readability: ReadabilityResult object containing the readability score
+        vocabulary: VocabularyResult object containing the vocabulary score
     """
 
     correctness: CorrectnessResult
+    readability: ReadabilityResult
     vocabulary: VocabularyResult
 
     @computed_field
@@ -33,14 +32,16 @@ class GlobalScore(BaseModel):
         return self._compute_score()
 
     def _compute_score(self) -> float:
-        return (CORRECTNESS_WEIGHT * self.correctness.score) + (
-            VOCABULARY_WEIGHT * self.vocabulary.score
-        )  # TODO: Add clarity and coherence weights
+        return (
+            CORRECTNESS_WEIGHT * self.correctness.score
+            + VOCABULARY_WEIGHT * self.vocabulary.score
+            + READABILITY_WEIGHT * self.readability.score
+        )
 
     @computed_field
     @property
     def score_in_percent(self) -> float:
-        return round(self.score * 100, 2)
+        return round_score(self.score * 100)
 
     def __str__(self) -> str:
         return (
@@ -53,6 +54,7 @@ class GlobalScore(BaseModel):
             + "\n"
             f"\t{self.correctness}"
             f"\t{self.vocabulary}"
+            f"\t{self.readability}"
         )
 
 

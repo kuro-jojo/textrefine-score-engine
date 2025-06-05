@@ -3,6 +3,7 @@ from language_tool_python.utils import LanguageToolError
 from models import MIN_WORD_COUNT, GlobalScore, TextInput
 from correctness import CorrectnessService
 from vocabulary import VocabularyService
+from readability import ReadabilityService
 import spacy
 from logging_config import setup_logging
 from ..limiter import get_limiter
@@ -15,6 +16,7 @@ router = APIRouter()
 nlp = spacy.load("en_core_web_sm")
 correctness_service = CorrectnessService(nlp=nlp)
 vocabulary_service = VocabularyService(nlp=nlp)
+readability_service = ReadabilityService()
 
 
 @router.post("/evaluation", response_model=GlobalScore)
@@ -41,10 +43,14 @@ def evaluate_all(request: Request, input: TextInput):
         logger.info("Analyzing vocabulary (diversity, sophistication, precision)...")
         vocabulary = vocabulary_service.analyze(input.text, correctness.issues)
 
+        logger.info("Analyzing readability...")
+        readability = readability_service.analyze(input.text)
+
         logger.info("Creating global score...")
         result = GlobalScore(
             vocabulary=vocabulary,
             correctness=correctness,
+            readability=readability,
         )
 
         logger.info(f"Evaluation completed. Score: {result.score_in_percent}%.")

@@ -1,4 +1,5 @@
 from collections import defaultdict
+from commons.utils import round_score
 from language_tool.service import language_tool_service
 from vocabulary.models import PrecisionResult, PrecisionScoreBreakdown
 from commons.models import ErrorCategory, TextIssue
@@ -68,14 +69,14 @@ class PrecisionChecker:
             )
 
         total_penalty = sum(category_penalties.values())
-        normalized_penalty = round(total_penalty / max(word_count, 1), 4)
-        score = round(1.0 - normalized_penalty, 4)
+        normalized_penalty = round_score(total_penalty / max(word_count, 1))
+        score = round_score(1.0 - normalized_penalty)
 
         breakdown = [
             PrecisionScoreBreakdown(
                 category=cat,
                 count=category_counts[cat],
-                penalty=round(category_penalties[cat], 2),
+                penalty=round_score(category_penalties[cat]),
             )
             for cat in category_counts
         ]
