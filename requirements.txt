@@ -5,5 +5,7 @@ pytest==8.3.5
 rapidfuzz==3.13.0
 slowapi==0.1.9
 spacy==3.8.5
-uvicorn==0.34.2
+textstat==0.7.7
+uvicorn==0.34.3
 wordfreq==3.1.1
+readtime==3.0.0

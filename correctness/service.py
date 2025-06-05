@@ -10,6 +10,7 @@ from typing import List, Optional
 from functools import lru_cache
 
 from commons.models import TextIssue
+from commons.utils import round_score
 from correctness.models import CorrectnessResult, CorrectnessScoreBreakdown
 from language_tool.service import language_tool_service
 import spacy
@@ -93,8 +94,8 @@ class CorrectnessService:
                 )
             total_penalty += issue.penalty
 
-        normalized_penalty = round(total_penalty / max(1, word_count), 4)
-        score = round(1 / (1 + normalized_penalty), 4)  # Use sigmoid like function
+        normalized_penalty = round_score(total_penalty / max(1, word_count))
+        score = round_score(1 / (1 + normalized_penalty))  # Use sigmoid like function
 
         return CorrectnessResult(
             score=score,

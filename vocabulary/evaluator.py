@@ -1,6 +1,7 @@
 from typing import List
 from spacy.language import Language
 from commons.models import TextIssue
+from commons.utils import round_score
 from vocabulary.models import VocabularyResult
 from vocabulary.sophistication_checker import SophisticationChecker
 from vocabulary.precision_checker import PrecisionChecker
@@ -56,7 +57,7 @@ class VocabularyEvaluator:
 
         # Return the aggregated result
         return VocabularyResult(
-            score=round(combined_score, 3),
+            score=round_score(combined_score),
             sophistication=sophistication_result,
             precision=precision_result,
             lexical_diversity=lexical_diversity_score,
