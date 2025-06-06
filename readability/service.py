@@ -5,7 +5,6 @@ This module provides a service for analyzing text readability using various metr
 including Flesch-Kincaid, SMOG, Gunning Fog, and others.
 """
 
-import logging
 import readtime
 from functools import lru_cache
 from typing import List, Tuple
@@ -14,9 +13,6 @@ from textstat import textstat
 from commons.utils import round_score
 
 from .models import ReadabilityMetric, ReadabilityResult
-
-logger = logging.getLogger(__name__)
-
 
 class ReadabilityService:
     """

@@ -1,8 +1,8 @@
 from typing import List
 from spacy.language import Language
 from commons.models import TextIssue
-from vocabulary.evaluator import VocabularyEvaluator
-from vocabulary.models import VocabularyResult
+from .evaluator import VocabularyEvaluator
+from .models import VocabularyResult
 
 
 class VocabularyService:

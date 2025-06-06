@@ -1,13 +1,13 @@
-from typing import List, Optional, Dict
-from language_tool_python import LanguageTool, Match
-import logging
-from collections import OrderedDict
+from logging_config import setup_logging
 import asyncio
+from typing import List, Optional
+from language_tool_python import LanguageTool, Match
+from collections import OrderedDict
 from language_tool_python.utils import LanguageToolError
 from commons.models import ErrorCategory, TextIssue
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+# Get logger for this module
+logger = setup_logging()
 
 
 class LanguageToolService:
@@ -56,7 +56,7 @@ class LanguageToolService:
                 # Still continue even if warm-up fails, as we want to start the service
 
             logger.info(
-                f"LanguageTool initialized successfully for language: {self._language}"
+                f"LanguageTool initialized successfully for language : {self._language}"
             )
         except Exception as e:
             logger.error(f"Failed to initialize LanguageTool: {e}")
