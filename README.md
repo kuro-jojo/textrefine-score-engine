@@ -1,118 +1,134 @@
-# TextRefine
+# TextRefine Score Engine
 
-TextRefine is a text analysis and scoring engine that evaluates writing quality across multiple dimensions. The engine provides quantitative scores and qualitative feedback to help identify areas for improvement in written content.
+TextRefine Score Engine is a comprehensive text analysis and scoring system that evaluates writing quality across multiple dimensions. The engine provides quantitative scores and qualitative feedback to help identify areas for improvement in written content.
 
-In simpler terms, TextRefine checks your writing in four different ways:
-- How correct it is (spelling, grammar, punctuation)
-- How good your vocabulary is
-- How clear it is to read
-- How well it flows together
+## Key Features
 
-This helps you see what parts of your writing need improvement.
+- **Multi-dimensional Analysis**: Evaluates text across four key dimensions
+- **Detailed Feedback**: Provides specific, actionable suggestions for improvement
+- **RESTful API**: Easy integration with other applications
+- **Docker Support**: Simple deployment with containerization
+- **Extensible Architecture**: Modular design for adding new analysis components
 
 ## Scoring Components
 
 TextRefine's scoring engine evaluates text across four key dimensions:
 
-1. **Correctness (25%)**
-   - Grammar accuracy
-   - Spelling and typos
-   - Mechanics (punctuation, capitalization)
-   - Word usage
-   - Meaning and logic
-   - Stylistic issues
-   - Contextual style
+### 1. Correctness (35%)
+- Grammar accuracy and syntax
+- Spelling and typo detection
+- Punctuation and mechanics
+- Word usage and style
+- Semantic and logical coherence
+- Contextual appropriateness
 
-2. **Vocabulary (20%)**
-   - Word choice and variety
-   - Lexical richness
-   - Domain-specific terminology
-   - Register and tone
+### 2. Vocabulary (25%)
+- Lexical diversity and richness
+- Word choice precision
+- Domain-specific terminology
+- Register and tone consistency
+- Sophistication of language
 
-3. **Clarity (25%)**
-   - Sentence structure
-   - Readability
-   - Coherence within sentences
-   - Information hierarchy
+### 3. Readability (15%)
+- Sentence structure complexity
+- Readability metrics (Flesch-Kincaid, etc.)
+- Information density
+- Text organization
+- Visual presentation
 
-4. **Coherence (30%)**
-   - Paragraph organization
-   - Topic flow
-   - Logical progression
-   - Contextual relevance
+### 4. Coherence (25%)
+- Paragraph structure
+- Topic flow and transitions
+- Logical progression of ideas
+- Overall text cohesion
+- Contextual relevance
 
 ## Project Structure
 
 ```
 scoreEngine/
-├── correctness/           # Grammar and correctness scoring
-│   ├── scorer.py         # Main scoring implementation
-│   ├── types.py          # Data structures and enums
-│   └── parser.py         # LanguageTool response parsing
-├── vocabulary/           # Vocabulary analysis
-├── clarity/              # Clarity scoring
-├── coherence/            # Coherence analysis
-└── main.py              # Main entry point
+├── api/                    # FastAPI application and endpoints
+├── coherence/              # Coherence analysis module
+├── commons/                # Shared utilities and models
+├── correctness/            # Grammar and correctness scoring
+├── language_tool/          # LanguageTool integration
+├── readability/            # Readability analysis
+├── vocabulary/             # Vocabulary analysis
+├── .github/               # GitHub workflows and templates
+├── tests/                  # Test suite
+├── Dockerfile             # Container configuration
+├── main.py                # Application entry point
+├── models.py              # Core data models
+├── requirements.txt       # Python dependencies
+└── logging_config.py      # Logging configuration
 ```
 
-## Installation
+## Getting Started
 
-1. Clone the repository
-2. Install dependencies:
+### Prerequisites
+
+- Python 3.8+
+- Docker (for containerized deployment)
+- LanguageTool server (can be run in a container)
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/TextRefine.git
+   cd TextRefine/scoreEngine
+   ```
+
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 
-3. Configure LanguageTool service:
-   - Set the `LANGUAGE_TOOL` environment variable to point to your LanguageTool instance
-   - Default: `http://localhost:8081/v2/check?language=en-US`
+### Running with Docker
 
-## Usage
+1. Build the Docker image:
+   ```bash
+   docker build -t textrefine-scoreengine .
+   ```
 
-```python
-from scoreEngine import TextRefine
+2. Run the container:
+   ```bash
+   docker run -p 8000:8000 textrefine-scoreengine
+   ```
 
-text = "Your text to analyze here"
-analyzer = TextRefine()
+## API Documentation
 
-# Get comprehensive analysis
-results = analyzer.analyze(text)
-
-# Access individual scores
-print(f"Correctness: {results.correctness.score}")
-print(f"Vocabulary: {results.vocabulary.score}")
-print(f"Clarity: {results.clarity.score}")
-print(f"Coherence: {results.coherence.score}")
-
-# Get overall score
-print(f"Overall Score: {results.overall_score}")
-```
-
-## Development
-
-The project follows a modular architecture, with each scoring component implemented as a separate module. Each module includes:
-
-- Scoring implementation
-- Data structures
-- Test suite
-- Documentation
+Once the service is running, you can access:
+- API documentation: `http://localhost:8000/docs`
+- Alternative documentation: `http://localhost:8000/redoc`
 
 ### Running Tests
 
 ```bash
-python -m unittest
+pytest -v
 ```
 
 ## Contributing
 
+Contributions are welcome! Please follow these steps:
+
 1. Fork the repository
-2. Create a feature branch
-3. Implement your changes
-4. Write tests
-5. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## License
 
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Contact
+
+For questions or feedback, please open an issue in the repository.
 
