@@ -5,7 +5,6 @@ This module provides services for analyzing text for grammatical and stylistic i
 computing correctness scores, and generating detailed breakdowns of potential issues.
 """
 
-import logging
 from typing import List, Optional
 from functools import lru_cache
 
@@ -14,9 +13,6 @@ from commons.utils import round_score
 from correctness.models import CorrectnessResult, CorrectnessScoreBreakdown
 from language_tool.service import language_tool_service
 import spacy
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 class CorrectnessService:

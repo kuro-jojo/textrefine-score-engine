@@ -1,13 +1,20 @@
+from json import JSONDecodeError
 from fastapi import APIRouter, HTTPException, Request
+from pydantic import ValidationError
+from google.genai.errors import ClientError
+from ..models import APIRequest
+from ..limiter import get_limiter
+from models import MIN_WORD_COUNT, GlobalScore
+from logging_config import setup_logging
+
 from language_tool_python.utils import LanguageToolError
-from models import MIN_WORD_COUNT, GlobalScore, TextInput
+import spacy
+import time
+
 from correctness import CorrectnessService
 from vocabulary import VocabularyService
 from readability import ReadabilityService
-import spacy
-from logging_config import setup_logging
-from ..limiter import get_limiter
-import time
+from coherence import CoherenceService
 
 logger = setup_logging()
 
@@ -17,6 +24,7 @@ nlp = spacy.load("en_core_web_sm")
 correctness_service = CorrectnessService(nlp=nlp)
 vocabulary_service = VocabularyService(nlp=nlp)
 readability_service = ReadabilityService()
+coherence_service = CoherenceService()
 
 
 @router.post("/evaluation", response_model=GlobalScore)
@@ -24,7 +32,7 @@ readability_service = ReadabilityService()
     "5/minute",
     error_message="Limit set to 5 requests per minute. Please try again later.",
 )
-def evaluate_all(request: Request, input: TextInput):
+def evaluate_all(request: Request, input: APIRequest):
     try:
         start_time = time.time()
         logger.info(f"Starting evaluation for text: {input.text[:10]}...")
@@ -37,20 +45,24 @@ def evaluate_all(request: Request, input: TextInput):
                 detail=f"Text is too short for evaluation (minimum {MIN_WORD_COUNT} words required).",
             )
 
-        logger.info("Analyzing correctness...")
+        logger.info("Analyzing text correctness...")
         correctness = correctness_service.analyze(input.text)
 
-        logger.info("Analyzing vocabulary (diversity, sophistication, precision)...")
+        logger.info("Analyzing text vocabulary...")
         vocabulary = vocabulary_service.analyze(input.text, correctness.issues)
 
-        logger.info("Analyzing readability...")
+        logger.info("Analyzing text readability...")
         readability = readability_service.analyze(input.text)
+
+        logger.info("Analyzing text coherence...")
+        coherence = coherence_service.analyze(input.text, topic=input.topic)
 
         logger.info("Creating global score...")
         result = GlobalScore(
-            vocabulary=vocabulary,
+            coherence=coherence,
             correctness=correctness,
             readability=readability,
+            vocabulary=vocabulary,
         )
 
         logger.info(f"Evaluation completed. Score: {result.score_in_percent}%.")
@@ -63,7 +75,24 @@ def evaluate_all(request: Request, input: TextInput):
             status_code=500,
             detail=f"Internal server error, please try again.",
         )
-
+    except JSONDecodeError as e:
+        logger.error("Error decoding JSON response: %s", str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error, please try again.",
+        )
+    except (TypeError, ValueError, ValidationError) as e:
+        logger.error(f"Invalid response format: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error, please try again.",
+        )
+    except ClientError as e:
+        logger.error("Error calling Gemini API: %s", str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error, please try again.",
+        )
     except Exception as e:
         logger.error(f"Error during evaluation: {str(e)}", exc_info=True)
         raise HTTPException(

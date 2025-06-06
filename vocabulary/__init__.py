@@ -1,3 +1,3 @@
 """ Vocabulary module """
 
-from vocabulary.service import VocabularyService
+from .service import VocabularyService

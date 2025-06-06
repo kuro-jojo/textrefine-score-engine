@@ -81,8 +81,18 @@ async def compress_old_logs():
         logger.error(f"Error compressing logs: {str(e)}", exc_info=True)
 
 
+class SafeFormatter(logging.Formatter):
+    def format(self, record):
+        if not hasattr(record, 'client_ip'):
+            record.client_ip = '127.0.0.1'
+        return super().format(record)
+
 def setup_logging():
     """Setup logging configuration for the score engine."""
+    # Replace formatters with our safe formatter
+    for formatter in LOGGING_CONFIG['formatters'].values():
+        formatter["()"] = SafeFormatter
+    
     logging.config.dictConfig(LOGGING_CONFIG)
     return logging.getLogger("score_engine")
 
@@ -143,11 +153,6 @@ LOGGING_CONFIG = {
     },
     "loggers": {
         "score_engine": {
-            "handlers": ["console", "file"],
-            "level": "DEBUG",
-            "propagate": False,
-        },
-        "coherence": {
             "handlers": ["console", "file"],
             "level": "DEBUG",
             "propagate": False,
