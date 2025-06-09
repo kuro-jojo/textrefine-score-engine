@@ -20,12 +20,12 @@ class TestReadabilityService:
         assert isinstance(result.score, float)
         assert 0 <= result.score <= 1
         assert result.flesch_reading_ease > 0
-        assert result.flesch_kincaid_grade > 0
+        assert result.dale_chall_score >= 0
 
     def test_analyze_empty_text(self, service: ReadabilityService):
         """Test analyzing empty text."""
         result = service.analyze("")
-        assert result.score == 0
+        assert result.score == 1.0
         assert "Empty text provided" in result.issues
 
     def test_analyze_complex_text(self, service: ReadabilityService):
@@ -42,7 +42,8 @@ class TestReadabilityService:
         assert isinstance(result.score, float)
         assert 0 <= result.score <= 1
         assert result.flesch_reading_ease > 0
-        assert result.flesch_kincaid_grade > 0
+        assert result.dale_chall_score >= 0
+        assert result.avg_words_per_sentence > 0
 
         # Complex text should have a lower score than simple text
         simple_text = "This is a simple sentence. It has two parts."
@@ -55,18 +56,25 @@ class TestReadabilityService:
         text = "The cat sat on the mat. It was happy."
         result = service.analyze(text)
         assert result.flesch_reading_ease_level == ReadingEase.VERY_EASY.value
+        assert result.dale_chall_score < 5.0  # Should be easy vocabulary
+        assert result.avg_words_per_sentence < 10  # Short sentences
 
         # More complex text
         text = "The feline positioned itself upon the horizontal surface designed for wiping one's feet."
         result = service.analyze(text)
         assert result.flesch_reading_ease_level == ReadingEase.DIFFICULT.value
+        assert result.dale_chall_score > 7.0  # More difficult vocabulary
+        assert result.avg_words_per_sentence > 10  # Longer sentence
 
     def test_grade_level_interpretation(self, service: ReadabilityService):
         """Test the grade level interpretation."""
         # Simple text should have a low grade level
         text = "The cat sat on the mat. It was happy."
         result = service.analyze(text)
-        assert result.overall_grade_level == EducationLevel.BASIC_LITERACY.display_name
+        assert result.overall_grade_level in [
+            EducationLevel.BASIC_LITERACY.display_name,
+            EducationLevel.GENERAL_PUBLIC.display_name,
+        ]
 
         # Complex text should have a higher grade level
         text = """
@@ -76,4 +84,7 @@ class TestReadabilityService:
         structure of the text.
         """
         result = service.analyze(text)
-        assert result.overall_grade_level == EducationLevel.GRADUATE_LEVEL.display_name
+        assert result.overall_grade_level in [
+            EducationLevel.HIGH_SCHOOL_LEVEL.display_name,
+            EducationLevel.HIGH_SCHOOL_GRADUATE.display_name,
+        ]

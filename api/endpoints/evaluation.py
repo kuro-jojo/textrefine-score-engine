@@ -1,4 +1,5 @@
 from json import JSONDecodeError
+import os
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import ValidationError
 from google.genai.errors import ClientError
@@ -15,7 +16,9 @@ from correctness import CorrectnessService
 from vocabulary import VocabularyService
 from readability import ReadabilityService
 from coherence import CoherenceService
+from dotenv import load_dotenv
 
+load_dotenv()
 logger = setup_logging()
 
 router = APIRouter()
@@ -26,11 +29,13 @@ vocabulary_service = VocabularyService(nlp=nlp)
 readability_service = ReadabilityService()
 coherence_service = CoherenceService()
 
+LIMIT = os.getenv("EVALUATION_LIMIT", "5")
+logger.info(f"Endpoint /evaluation limit set to {LIMIT} requests per minute.")
 
 @router.post("/evaluation", response_model=GlobalScore)
 @get_limiter().limit(
-    "5/minute",
-    error_message="Limit set to 5 requests per minute. Please try again later.",
+    f"{LIMIT}/minute",
+    error_message=f"Limit set to {LIMIT} requests per minute. Please try again later.",
 )
 def evaluate_all(request: Request, input: APIRequest):
     try:
@@ -65,8 +70,8 @@ def evaluate_all(request: Request, input: APIRequest):
             vocabulary=vocabulary,
         )
 
-        logger.info(f"Evaluation completed. Score: {result.score_in_percent}%.")
-        logger.info(f"Response time: {time.time() - start_time:.2f} seconds.")
+        logger.info(f"Evaluation completed. Global score: {result.score_in_percent}%.")
+        logger.info(f"Evaluation duration: {time.time() - start_time:.2f} seconds.")
         return result
 
     except LanguageToolError as e:
@@ -93,6 +98,8 @@ def evaluate_all(request: Request, input: APIRequest):
             status_code=500,
             detail=f"Internal server error, please try again.",
         )
+    except HTTPException as e:
+        raise e
     except Exception as e:
         logger.error(f"Error during evaluation: {str(e)}", exc_info=True)
         raise HTTPException(

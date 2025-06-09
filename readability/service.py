@@ -47,76 +47,84 @@ class ReadabilityService:
         """
         # Create a cache key that includes both text and audience
         cache_key = (text, audience)
-        
+
         # Check if we have a cached result
-        if hasattr(self, '_analyze_cache') and cache_key in self._analyze_cache:
+        if hasattr(self, "_analyze_cache") and cache_key in self._analyze_cache:
             return self._analyze_cache[cache_key]
-            
+
         # Call the implementation and cache the result
         result = self._analyze_impl(text)
-        
+
         # Apply audience evaluation if needed
         if audience:
             result.evaluate_for_audience(audience)
-            
+
         # Initialize cache if it doesn't exist
-        if not hasattr(self, '_analyze_cache'):
+        if not hasattr(self, "_analyze_cache"):
             self._analyze_cache = {}
-            
+
         # Cache the result with the combined key
         self._analyze_cache[cache_key] = result
         return result
 
     def _cap_metric(self, metric: ReadabilityMetric) -> ReadabilityMetric:
         """
-        Cap metric values to a maximum value.
+        Ensure metric values are within valid ranges.
 
         Args:
-            metric: ReadabilityMetric object to cap
+            metric: ReadabilityMetric object to validate
 
         Returns:
-            Capped ReadabilityMetric object
+            Validated ReadabilityMetric object
         """
         metric.flesch_reading_ease = max(0, min(100, metric.flesch_reading_ease))
-        metric.flesch_kincaid_grade = max(0, min(20, metric.flesch_kincaid_grade))
-        metric.smog_index = max(0, min(20, metric.smog_index))
-        metric.gunning_fog = max(0, min(20, metric.gunning_fog))
-        metric.automated_readability_index = max(
-            0, min(20, metric.automated_readability_index)
-        )
-        metric.coleman_liau_index = max(0, min(20, metric.coleman_liau_index))
         metric.dale_chall_score = max(0, min(10, metric.dale_chall_score))
-
+        metric.avg_words_per_sentence = max(0, metric.avg_words_per_sentence)
         return metric
 
     def _calculate_metrics(self, text: str) -> ReadabilityMetric:
         """
-        Calculate all readability metrics.
+        Calculate essential readability metrics.
 
         Args:
             text: Input text to analyze
 
         Returns:
-            Dictionary containing all readability metrics
+            ReadabilityMetric object containing the calculated metrics
         """
-
-        return self._cap_metric(
-            ReadabilityMetric(
-                flesch_reading_ease=textstat.flesch_reading_ease(text),
-                flesch_kincaid_grade=textstat.flesch_kincaid_grade(text),
-                smog_index=textstat.smog_index(text),
-                gunning_fog=textstat.gunning_fog(text),
-                automated_readability_index=textstat.automated_readability_index(text),
-                coleman_liau_index=textstat.coleman_liau_index(text),
-                dale_chall_score=textstat.dale_chall_readability_score(text),
+        # Skip empty or whitespace-only text
+        if not text or not text.strip():
+            return ReadabilityMetric(
+                flesch_reading_ease=100.0,  # Perfect score for empty text
+                dale_chall_score=0.0,  # Easiest possible score
+                avg_words_per_sentence=0.0,  # No sentences
             )
+
+        # Calculate essential metrics
+        flesch = textstat.flesch_reading_ease(text)
+        dale_chall = textstat.dale_chall_readability_score(text)
+
+        # Calculate average words per sentence
+        words = textstat.lexicon_count(text, removepunct=True)
+        sentences = textstat.sentence_count(text)
+        avg_words = words / max(1, sentences)  # Avoid division by zero
+
+        metrics = ReadabilityMetric(
+            flesch_reading_ease=flesch,
+            dale_chall_score=dale_chall,
+            avg_words_per_sentence=avg_words,
         )
+
+        return self._cap_metric(metrics)
 
     def _generate_issues_and_suggestions(
         self, metrics: ReadabilityMetric
     ) -> Tuple[List[str], List[str]]:
         """
         Generate issues and suggestions based on readability metrics.
+
+        Note: Audience-specific issues are handled in the model's evaluate_for_audience method.
+        This method focuses on general readability issues that aren't audience-specific.
 
         Args:
             metrics: Readability metrics
@@ -127,101 +135,163 @@ class ReadabilityService:
         issues = []
         suggestions = []
 
-        # Check reading level
-        if metrics.flesch_reading_ease < 30:
+        # Check for extremely low readability that might indicate issues regardless of audience
+        if metrics.flesch_reading_ease < 20:
+            issues.append("Extremely difficult to read")
+            suggestions.append(
+                "The text is very difficult to read. Consider simplifying the language, "
+                "breaking up long sentences, and explaining technical terms. Aim for shorter "
+                "sentences and more common words where possible."
+            )
+        elif metrics.flesch_reading_ease < 30:
             issues.append("Very difficult to read")
             suggestions.append(
-                "The text is very difficult to read. Consider simplifying sentence structure and vocabulary."
+                "The text is quite challenging to read. Consider simplifying some of the "
+                "language and sentence structures to improve readability. Shorter sentences "
+                "and more common words can help."
             )
         elif metrics.flesch_reading_ease < 50:
             issues.append("Difficult to read")
             suggestions.append(
-                "The text may be challenging for many readers. Consider simplifying some complex sentences."
+                "The text may be challenging for some readers. Consider simplifying some "
+                "of the more complex language and breaking up longer sentences."
             )
 
-        # Check for high grade level
-        avg_grade = (
-            metrics.flesch_kincaid_grade
-            + metrics.smog_index
-            + metrics.gunning_fog
-            + metrics.automated_readability_index
-            + metrics.coleman_liau_index
-        ) / 5
-
-        if avg_grade > 16:
-            issues.append("Highly specialized language")
+        # Check vocabulary difficulty using Dale-Chall score
+        if metrics.dale_chall_score >= 9.0:
+            issues.append("Very difficult vocabulary")
             suggestions.append(
-                "The text uses highly specialized language suitable for experts. Consider if this level of complexity is necessary for your audience."
+                "The vocabulary is very advanced, similar to academic or technical writing. "
+                "Consider defining technical terms or using more common alternatives where possible."
+            )
+        elif metrics.dale_chall_score >= 7.0:
+            issues.append("Advanced vocabulary")
+            suggestions.append(
+                "The text uses some advanced vocabulary. Consider whether all technical terms "
+                "are necessary or if they could be explained in simpler terms for better clarity."
             )
 
-        # Check Dale-Chall score for difficult vocabulary
-        if metrics.dale_chall_score > 0.8:
-            issues.append("Complex vocabulary")
+        # Check sentence length
+        if metrics.avg_words_per_sentence > 25:
+            issues.append(
+                f"Long average sentence length ({metrics.avg_words_per_sentence:.1f} words)"
+            )
             suggestions.append(
-                "The text contains many words that may be unfamiliar to general readers. Consider using more common alternatives where possible."
+                "The average sentence length is quite long, which can make the text harder to read. "
+                "Aim for an average of 15-20 words per sentence for better readability. Try breaking "
+                "up long sentences into shorter, clearer ones."
+            )
+        elif metrics.avg_words_per_sentence > 20:
+            issues.append(
+                f"Slightly long average sentence length ({metrics.avg_words_per_sentence:.1f} words)"
+            )
+            suggestions.append(
+                "Some sentences are quite long. Consider breaking up the longest ones "
+                "to improve readability. Aim for an average of 15-20 words per sentence."
+            )
+
+        # Check for very short sentences that might make the text choppy
+        if metrics.avg_words_per_sentence < 10:
+            issues.append(
+                f"Short, choppy sentences ({metrics.avg_words_per_sentence:.1f} words on average)"
+            )
+            suggestions.append(
+                "The text contains many very short sentences which can make it feel choppy. "
+                "Consider combining some related ideas into more complex sentences for better flow. "
+                "Aim for a mix of sentence lengths."
             )
 
         return issues, suggestions
 
-    def _normalize_metric(self, metric: ReadabilityMetric) -> float:
+    def _normalize_metric(
+        self, fre: float, dale_chall: float, avg_words: float
+    ) -> ReadabilityMetric:
         """
         Normalize different metrics to a 0-1 scale where 0 is best and 1 is worst.
 
         Args:
-            metric: ReadabilityMetric object
+            fre: Flesch Reading Ease score
+            dale_chall: Dale-Chall score
+            avg_words: Average words per sentence
 
         Returns:
-            Normalized value between 0 and 1
+            Normalized ReadabilityMetric with all metrics scaled 0-1
         """
-        metric.flesch_reading_ease = max(
-            0, min(1, 1 - (metric.flesch_reading_ease / 100))
-        )
-        metric.flesch_kincaid_grade = max(0, min(1, metric.flesch_kincaid_grade / 20.0))
-        metric.smog_index = max(0, min(1, metric.smog_index / 20.0))
-        metric.gunning_fog = max(0, min(1, metric.gunning_fog / 20.0))
-        metric.automated_readability_index = max(
-            0, min(1, metric.automated_readability_index / 20.0)
-        )
-        metric.coleman_liau_index = max(0, min(1, metric.coleman_liau_index / 20.0))
-        metric.dale_chall_score = max(
-            0, min(1, (metric.dale_chall_score - 4.9) / (10.6 - 4.9))
+        # Flesch Reading Ease: 90-100 (very easy) to 0-30 (very difficult)
+        # Normalize to 0-1 where 0 is best (very easy)
+        fre = max(0, min(1, fre / 100.0))
+
+        # Dale-Chall: 4.9 or below (easy) to 10 (difficult)
+        # Normalize to 0-1 where 0 is best (easiest)
+        dale_chall_min = 4.9
+        dale_chall_max = 10.0
+        dale_chall = max(
+            0,
+            min(
+                1,
+                1 - ((dale_chall - dale_chall_min) / (dale_chall_max - dale_chall_min)),
+            ),
         )
 
-        return metric
+        # Sentence length: Ideal is around 15-20 words
+        # Normalize to 0-1 where 0 is best (ideal length)
+        ideal_length = 17.5
+        max_deviation = 30  # Max deviation from ideal we'll consider
+        length_deviation = abs(avg_words - ideal_length)
+        avg_words = min(1.0, length_deviation / max_deviation)
 
-    def _calculate_composite_score(self, metrics: ReadabilityMetric) -> float:
+        return ReadabilityMetric(
+            flesch_reading_ease=fre,
+            dale_chall_score=dale_chall,
+            avg_words_per_sentence=avg_words,
+        )
+
+    def _calculate_composite_score(
+        self, fre: float, dale_chall: float, avg_words: float
+    ) -> float:
         """
-        Calculate a composite readability score (0-1) where higher is better.
+        Calculate a composite score from 0-1 based on key readability metrics.
 
         Args:
-            metrics: ReadabilityMetric object
+            fre: Flesch Reading Ease score
+            dale_chall: Dale-Chall score
+            avg_words: Average words per sentence
 
         Returns:
-            Composite score between 0 and 1 where 1 is most readable
+            Composite score from 0-1 where 1 is most readable
         """
-        m = self._cap_metric(metrics).model_copy()
-        # Normalize all metrics to 0-1 scale where 0 is best and 1 is worst
-        normalized = self._normalize_metric(m)
+        m = self._normalize_metric(fre, dale_chall, avg_words)
 
-        # Weighted average - adjust weights as needed
-        weights = {
-            "flesch_reading_ease": 0.25,
-            "flesch_kincaid_grade": 0.15,
-            "smog_index": 0.15,
-            "gunning_fog": 0.15,
-            "automated_readability_index": 0.1,
-            "coleman_liau_index": 0.1,
-            "dale_chall_score": 0.1,
-        }
 
-        # Calculate weighted sum (lower is better)
-        weighted_sum = sum(
-            weight * normalized.__getattribute__(metric)
-            for metric, weight in weights.items()
+        # Sentence length factor (penalize very long sentences)
+        # Ideal is around 15-20 words per sentence
+        if m.avg_words_per_sentence <= 15:
+            sentence_score = 1.0
+        elif m.avg_words_per_sentence <= 25:
+            # Linear decrease from 15-25 words
+            sentence_score = 1.0 - ((m.avg_words_per_sentence - 15) * 0.1)
+        else:
+            # More severe penalty for very long sentences
+            sentence_score = max(0.1, 1.0 - (m.avg_words_per_sentence - 25) * 0.05)
+
+        # Calculate base score as weighted average
+        # Flesch Reading Ease is the most important factor (60%)
+        # Dale-Chall score is second most important (20%)
+        # Sentence length accounts for remaining 20%
+
+        base_score = min(
+            1.0,
+            ((0.6 * m.flesch_reading_ease) + (0.2 * m.dale_chall_score) + (0.2 * sentence_score))
+            * 1.2,
         )
+        # Apply adjustments based on text difficulty
+        # For very difficult texts (FRE < 30), apply additional penalty
+        if m.flesch_reading_ease < 30:
+            difficulty_penalty = 0.2 * (1.0 - (m.flesch_reading_ease / 30.0))
+            base_score = max(0.1, base_score - difficulty_penalty)
 
-        # Return inverted score so higher is better
-        return 1.0 - weighted_sum
+        # Ensure score is within bounds
+        return max(0.0, min(1.0, base_score))
 
     def _analyze_impl(self, text: str) -> ReadabilityResult:
         """
@@ -235,14 +305,10 @@ class ReadabilityService:
         """
         if not text.strip():
             return ReadabilityResult(
-                flesch_reading_ease=0,
-                flesch_kincaid_grade=0,
-                smog_index=0,
-                gunning_fog=0,
-                automated_readability_index=0,
-                coleman_liau_index=0,
-                dale_chall_score=0,
-                score=0,
+                flesch_reading_ease=100.0,  # Perfect score for empty text
+                dale_chall_score=0.0,  # Easiest possible score
+                avg_words_per_sentence=0.0,  # No sentences
+                score=1.0,  # Perfect score
                 issues=["Empty text provided"],
                 suggestions=["Provide some text to analyze"],
                 estimated_reading_time=0,
@@ -258,22 +324,20 @@ class ReadabilityService:
         issues, suggestions = self._generate_issues_and_suggestions(metrics)
 
         # Calculate composite score
-        score = self._calculate_composite_score(metrics)
+        score = self._calculate_composite_score(
+            metrics.flesch_reading_ease,
+            metrics.dale_chall_score,
+            metrics.avg_words_per_sentence,
+        )
 
         # Calculate estimated reading time
         estimated_reading_time = readtime.of_html(text).seconds
 
-        # Create and return result
+        # Create and return result with simplified metrics
         return ReadabilityResult(
             flesch_reading_ease=round_score(metrics.flesch_reading_ease),
-            flesch_kincaid_grade=round_score(metrics.flesch_kincaid_grade),
-            smog_index=round_score(metrics.smog_index),
-            gunning_fog=round_score(metrics.gunning_fog),
-            automated_readability_index=round_score(
-                metrics.automated_readability_index
-            ),
-            coleman_liau_index=round_score(metrics.coleman_liau_index),
             dale_chall_score=round_score(metrics.dale_chall_score),
+            avg_words_per_sentence=round(metrics.avg_words_per_sentence),
             score=round_score(score),
             issues=issues,
             suggestions=suggestions,
