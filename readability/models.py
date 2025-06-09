@@ -3,7 +3,7 @@ Models for readability analysis results.
 """
 
 from enum import Enum
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, Field, computed_field
 
 
@@ -35,6 +35,18 @@ class ReadingEase(Enum):
             return cls.DIFFICULT
         else:
             return cls.VERY_CONFUSING
+
+
+# Audience to expected grade level mapping (min_grade, max_grade)
+AUDIENCE_GRADE_LEVELS = {
+    "children": (1, 6),  # Elementary school
+    "teenagers": (7, 12),  # Middle to High school
+    "young_adults": (11, 14),  # High school to early college
+    "general": (6, 12),  # Standard reading level
+    "business": (10, 14),  # Professional but accessible
+    "professional": (12, 16),  # Technical/professional content
+    "academic": (14, 20),  # Academic/research level
+}
 
 
 class EducationLevel(int, Enum):
@@ -118,14 +130,16 @@ class ReadabilityResult(BaseModel):
         dale_chall_score: Score from 0-1 indicating text difficulty based on familiar words.
             Higher values indicate more difficult text.
 
+        target_audience: The intended audience for the text (if specified).
+
         score: Composite score from 0-1 where higher is better.
             Combines all metrics into a single, easy-to-interpret value.
-
         reading_ease: Human-readable interpretation of the Flesch Reading Ease score.
-
         overall_grade_level: Human-readable interpretation of the overall grade level.
-
         estimated_reading_time: Estimated reading time in seconds.
+
+        audience_appropriate: Whether the text's reading level matches the target audience.
+        audience_issues: List of issues related to audience appropriateness.
     """
 
     # Core metrics with professional interpretation
@@ -137,13 +151,12 @@ class ReadabilityResult(BaseModel):
     coleman_liau_index: float = Field(..., ge=0, le=20)
     dale_chall_score: float = Field(..., ge=0, le=10)
     estimated_reading_time: int = Field(..., ge=0)
-
-    # Composite score (0-1 where higher is better)
+    target_audience: Optional[str] = None
     score: float = Field(..., ge=0, le=1)
-
-    # Issues and suggestions
     issues: List[str] = Field(default_factory=list)
     suggestions: List[str] = Field(default_factory=list)
+    audience_appropriate: Optional[bool] = None
+    audience_issues: List[str] = Field(default_factory=list)
 
     @computed_field
     @property
@@ -153,6 +166,7 @@ class ReadabilityResult(BaseModel):
         Returns:
             str: Professional category that best describes the text's reading level.
         """
+        # Average of all grade-based metrics
         avg_grade = (
             self.flesch_kincaid_grade
             + self.smog_index
@@ -162,6 +176,53 @@ class ReadabilityResult(BaseModel):
         ) / 5
 
         return EducationLevel.from_grade(avg_grade).display_name
+
+    def evaluate_for_audience(self, audience: Optional[str] = None) -> None:
+        """Evaluate the text's readability for a specific target audience.
+
+        Args:
+            audience: The target audience for the text
+        """
+        if not audience or audience not in AUDIENCE_GRADE_LEVELS:
+            self.audience_appropriate = None
+            return
+
+        self.target_audience = audience
+        min_grade, max_grade = AUDIENCE_GRADE_LEVELS[audience]
+
+        # Get the average grade level of the text
+        avg_grade = (
+            self.flesch_kincaid_grade
+            + self.smog_index
+            + self.gunning_fog
+            + self.automated_readability_index
+            + self.coleman_liau_index
+        ) / 5
+
+        # Check if the text's grade level is appropriate for the audience
+        if avg_grade < min_grade:
+            self.audience_appropriate = False
+            self.audience_issues.append(
+                f"Text may be too simple for the target audience ({audience}). "
+                f"Consider using more sophisticated language and complex sentence structures."
+            )
+        elif avg_grade > max_grade:
+            self.audience_appropriate = False
+            self.audience_issues.append(
+                f"Text may be too complex for the target audience ({audience}). "
+                f"Consider simplifying the language and breaking down complex ideas."
+            )
+        else:
+            self.audience_appropriate = True
+
+        # Update the overall score based on audience appropriateness
+        if self.audience_appropriate is False:
+            # Reduce the score by up to 20% based on how far outside the range it is
+            if avg_grade < min_grade:
+                penalty = min(0.2, (min_grade - avg_grade) * 0.05)
+            else:
+                penalty = min(0.2, (avg_grade - max_grade) * 0.05)
+            self.score = max(0, self.score - penalty)
 
     @computed_field
     @property

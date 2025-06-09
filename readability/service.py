@@ -7,7 +7,7 @@ including Flesch-Kincaid, SMOG, Gunning Fog, and others.
 
 import readtime
 from functools import lru_cache
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from textstat import textstat
 from commons.utils import round_score
@@ -34,17 +34,38 @@ class ReadabilityService:
         # Cache the analyze method for better performance
         self._analyze = lru_cache(maxsize=128)(self._analyze_impl)
 
-    def analyze(self, text: str) -> ReadabilityResult:
+    def analyze(self, text: str, audience: Optional[str] = None) -> ReadabilityResult:
         """
         Analyze the text for readability.
 
         Args:
             text: The text to analyze
+            audience: Optional target audience for evaluation
 
         Returns:
             ReadabilityResult object containing the score and issues
         """
-        return self._analyze(text)
+        # Create a cache key that includes both text and audience
+        cache_key = (text, audience)
+        
+        # Check if we have a cached result
+        if hasattr(self, '_analyze_cache') and cache_key in self._analyze_cache:
+            return self._analyze_cache[cache_key]
+            
+        # Call the implementation and cache the result
+        result = self._analyze_impl(text)
+        
+        # Apply audience evaluation if needed
+        if audience:
+            result.evaluate_for_audience(audience)
+            
+        # Initialize cache if it doesn't exist
+        if not hasattr(self, '_analyze_cache'):
+            self._analyze_cache = {}
+            
+        # Cache the result with the combined key
+        self._analyze_cache[cache_key] = result
+        return result
 
     def _cap_metric(self, metric: ReadabilityMetric) -> ReadabilityMetric:
         """
@@ -225,6 +246,9 @@ class ReadabilityService:
                 issues=["Empty text provided"],
                 suggestions=["Provide some text to analyze"],
                 estimated_reading_time=0,
+                target_audience=None,
+                audience_appropriate=None,
+                audience_issues=[],
             )
 
         # Calculate metrics

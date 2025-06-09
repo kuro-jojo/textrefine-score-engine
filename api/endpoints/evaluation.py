@@ -52,7 +52,7 @@ def evaluate_all(request: Request, input: APIRequest):
         vocabulary = vocabulary_service.analyze(input.text, correctness.issues)
 
         logger.info("Analyzing text readability...")
-        readability = readability_service.analyze(input.text)
+        readability = readability_service.analyze(input.text, audience=input.audience)
 
         logger.info("Analyzing text coherence...")
         coherence = coherence_service.analyze(input.text, topic=input.topic)
