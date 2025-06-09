@@ -104,9 +104,9 @@ class ReadabilityMetric(BaseModel):
         avg_words_per_sentence: Average number of words per sentence.
     """
 
-    flesch_reading_ease: float = Field(..., ge=0)
-    dale_chall_score: float = Field(..., ge=0)
-    avg_words_per_sentence: float = Field(..., ge=0)
+    flesch_reading_ease: float
+    dale_chall_score: float
+    avg_words_per_sentence: float 
 
 
 class ReadabilityResult(BaseModel):
