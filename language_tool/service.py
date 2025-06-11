@@ -84,7 +84,7 @@ class LanguageToolService:
             return matches
 
         except asyncio.TimeoutError:
-            logger.warning("LanguageTool check timed out")
+            logger.error("LanguageTool check timed out")
             raise LanguageToolError("LanguageTool check timed out")
         except Exception as e:
             logger.error(f"Error checking text: {e}")

@@ -77,8 +77,8 @@ def evaluate_all(request: Request, input: APIRequest):
     except LanguageToolError as e:
         logger.error("Error calling LanguageTool API: %s", str(e))
         raise HTTPException(
-            status_code=500,
-            detail=f"Internal server error, please try again.",
+            status_code=408,
+            detail=f"Server timeout. Please try again.",
         )
     except JSONDecodeError as e:
         logger.error("Error decoding JSON response: %s", str(e))
